@@ -1,0 +1,144 @@
+﻿{% load static %}
+<!DOCTYPE html>
+<html lang="vi">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Global English - Đăng nhập</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap"
+            rel="stylesheet"
+        />
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+        <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+        />
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+        <script src="https://unpkg.com/htmx.org@1.9.2"></script>
+        <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
+        <link rel="stylesheet" href="{% static 'public/css/login.css' %}" />
+    </head>
+    <body class="login-body">
+        <nav class="navbar navbar-expand-lg site-nav" aria-label="Điều hướng">
+            <div class="container">
+                <a class="navbar-brand" href="{% url 'main:home' %}#hero">Global English</a>
+                <button
+                    class="navbar-toggler"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#loginNav"
+                    aria-controls="loginNav"
+                    aria-expanded="false"
+                    aria-label="Mở menu"
+                >
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="loginNav">
+                    <ul class="navbar-nav ms-auto align-items-lg-center">
+                        <li class="nav-item"><a class="nav-link" href="{% url 'main:home' %}#features">Giới thiệu</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{% url 'main:home' %}#courses">Khóa học</a></li>
+                        <li class="nav-item"><a class="nav-link" href="mailto:info@globalenglish.edu.vn">Hỗ trợ</a></li>
+                    </ul>
+                    <a class="btn btn-light btn-sm rounded-pill ms-lg-3 mt-3 mt-lg-0" href="{% url 'main:home' %}">Về trang chủ</a>
+                </div>
+            </div>
+        </nav>
+
+        <main class="login-main">
+            <section class="login-hero" x-data="{ ready: false }" x-init="setTimeout(() => (ready = true), 100)">
+                <div class="login-hero__background"></div>
+                <div class="container position-relative">
+                    <div class="row align-items-center gx-lg-5">
+                        <div class="col-lg-6 mb-5 mb-lg-0">
+                            <div class="login-hero__content">
+                                <p class="text-uppercase small fw-semibold text-white-50 mb-3">Welcome back</p>
+                                <h1 class="display-5 fw-bold text-white mb-4">
+                                    Kết nối với lớp học Global English của bạn
+                                </h1>
+                                <p class="lead text-white-75 mb-4">
+                                    Tài khoản được trung tâm cấp sẵn. Khi cần hỗ trợ hoặc cấp lại thông tin đăng nhập, hãy liên hệ ngay đội ngũ chăm sóc học viên.
+                                </p>
+                                <div class="d-flex flex-wrap gap-3">
+                                    <a class="btn btn-light btn-lg rounded-pill px-4" href="{% url 'main:home' %}">
+                                        <i class="fas fa-house me-2"></i> Quay về trang chủ
+                                    </a>
+                                    <a class="btn btn-outline-light btn-lg rounded-pill px-4" href="mailto:info@globalenglish.edu.vn">
+                                        <i class="fas fa-headset me-2"></i> Liên hệ hỗ trợ
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="login-card shadow-lg" id="login-card" x-data="loginForm()">
+                                <div class="login-card__header text-center mb-4">
+                                    <h2 class="h3 fw-semibold mb-1">Đăng nhập tài khoản</h2>
+                                </div>
+                                <form class="login-form" hx-post="/auth/login" hx-target="#login-response" hx-swap="innerHTML">
+                                    <div class="mb-3">
+                                        <label for="email" class="form-label">Email</label>
+                                        <input
+                                            type="email"
+                                            class="form-control form-control-lg"
+                                            id="email"
+                                            placeholder="ban@example.com"
+                                            required
+                                        />
+                                    </div>
+                                    <div class="mb-3" x-data="{ show: false }">
+                                        <label for="password" class="form-label">Mật khẩu</label>
+                                        <div class="input-group input-group-lg">
+                                            <input
+                                                :type="show ? 'text' : 'password'"
+                                                class="form-control"
+                                                id="password"
+                                                placeholder="Nhập mật khẩu"
+                                                required
+                                            />
+                                            <button class="btn btn-outline-secondary" type="button" @click="show = !show">
+                                                <i :class="show ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="remember" />
+                                            <label class="form-check-label" for="remember">Nhớ đăng nhập</label>
+                                        </div>
+                                        <a href="mailto:info@globalenglish.edu.vn" class="link-light text-decoration-underline">Quên mật khẩu?</a>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary btn-lg w-100 rounded-pill">
+                                        <span class="me-2"><i class="fas fa-right-to-bracket"></i></span> Đăng nhập
+                                    </button>
+                                    <div id="login-response" class="mt-3"></div>
+                                </form>
+                                <div class="login-card__divider my-4">
+                                    <span>Hoặc</span>
+                                </div>
+                                <div class="d-grid gap-3">
+                                    <button type="button" class="btn btn-outline-light rounded-pill btn-lg">
+                                        <i class="fab fa-google me-2"></i> Đăng nhập với Google
+                                    </button>
+                                    <button type="button" class="btn btn-outline-light rounded-pill btn-lg">
+                                        <i class="fab fa-facebook-f me-2"></i> Đăng nhập với Facebook
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="login-footer">
+            <div class="container text-center text-white-50 small py-4">
+                © 2025 Global English. Tiếp tục hành trình làm chủ tiếng Anh cùng chúng tôi.
+            </div>
+        </footer>
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="{% static 'public/js/login.js' %}"></script>
+    </body>
+</html>

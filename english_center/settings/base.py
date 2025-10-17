@@ -1,4 +1,4 @@
-"""Base settings for webEnglishCenter (Django 5.2+)."""
+﻿"""Base settings for webEnglishCenter (Django 5.2+)."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -72,7 +72,7 @@ ROOT_URLCONF = "english_center.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "templates"],
+        "DIRS": [BASE_DIR / "templates", BASE_DIR / "main" / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -115,11 +115,11 @@ else:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "NAME": env("POSTGRES_DB", default="webenglishcenter"),
-            "USER": env("POSTGRES_USER", default="webuser"),
-            "PASSWORD": env("POSTGRES_PASSWORD", default="secret"),
+            "NAME": env("POSTGRES_DB", default="postgres"),
+            "USER": env("POSTGRES_USER", default="postgres"),
+            "PASSWORD": env("POSTGRES_PASSWORD", default="123"),
             "HOST": env("POSTGRES_HOST", default="127.0.0.1"),
-            "PORT": env("POSTGRES_PORT", default="5434"),
+            "PORT": env("POSTGRES_PORT", default="5432"),
             "CONN_MAX_AGE": 60,
             "OPTIONS": {"sslmode": "prefer"},
         }
@@ -136,7 +136,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Static / Media
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_DIRS = [BASE_DIR / "static"]
+STATICFILES_DIRS = [BASE_DIR / "static", BASE_DIR / "main" / "static"]
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
@@ -197,3 +197,4 @@ LOGGING = {
         "django.request": {"handlers": ["console"], "level": "WARNING", "propagate": False},
     },
 }
+
