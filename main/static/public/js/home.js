@@ -1,6 +1,6 @@
-﻿/* global gsap, bootstrap */
+/* global gsap, bootstrap */
 
-document.addEventListener("DOMContentLoaded", () => {
+﻿document.addEventListener("DOMContentLoaded", () => {
     const bgContainer = document.querySelector(".hero__background");
 
     if (bgContainer) {
@@ -66,4 +66,3 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 });
-

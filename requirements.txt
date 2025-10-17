@@ -14,3 +14,4 @@ redis>=5.0
 psycopg[binary]>=3.2
 gunicorn>=21.2
 django-cors-headers>=4.3
+django-sass-processor>=1.3

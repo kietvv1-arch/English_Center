@@ -1,0 +1,24 @@
+{
+  "name": "english_center",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "npm run build:css",
+    "build:css": "sass main/static/public/scss:main/static/public/css --no-source-map",
+    "watch": "sass --watch main/static/public/scss:main/static/public/css --no-source-map"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kietvv1-arch/English_Center.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/kietvv1-arch/English_Center/issues"
+  },
+  "homepage": "https://github.com/kietvv1-arch/English_Center#readme",
+  "description": "Frontend tooling for English Center assets",
+  "devDependencies": {
+    "sass": "^1.93.2"
+  }
+}

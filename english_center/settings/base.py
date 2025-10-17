@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     "django_celery_results",
     "django.contrib.postgres",
     "corsheaders",
+    "sass_processor",
     # Optional UX/admin
     "jazzmin",
     # Project
@@ -137,8 +138,20 @@ AUTH_PASSWORD_VALIDATORS = [
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static", BASE_DIR / "main" / "static"]
+STATICFILES_FINDERS = [
+    "django.contrib.staticfiles.finders.FileSystemFinder",
+    "django.contrib.staticfiles.finders.AppDirectoriesFinder",
+    "sass_processor.finders.CssFinder",
+]
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+SASS_PROCESSOR_ROOT = BASE_DIR / "main" / "static"
+SASS_PROCESSOR_INCLUDE_DIRS = [
+    BASE_DIR / "main" / "static",
+    BASE_DIR / "static",
+]
+SASS_PROCESSOR_ENABLED = True
 
 # Email
 EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")

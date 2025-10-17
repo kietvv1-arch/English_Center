@@ -71,4 +71,3 @@ document.addEventListener("htmx:afterRequest", (event) => {
         }
     }
 });
-
