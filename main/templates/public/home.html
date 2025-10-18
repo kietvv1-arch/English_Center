@@ -1,512 +1,508 @@
-﻿{% load static sass_tags %}
+{% load static sass_tags %}
 <!DOCTYPE html>
 <html lang="vi">
-    <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Global English - Mở ra thế giới với ngôn ngữ toàn cầu</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-        <link
-            href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap"
-            rel="stylesheet"
-        />
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-        <link
-            rel="stylesheet"
-            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-        />
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-        <script src="https://unpkg.com/htmx.org@1.9.2"></script>
-        <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
-        <link rel="stylesheet" href="{% sass_src 'public/scss/home.scss' %}" />
-    </head>
-    <body>
-        <nav class="navbar navbar-expand-lg site-nav" aria-label="Điều hướng chính">
-            <div class="container">
-                <a class="navbar-brand" href="#hero">Global English</a>
-                <button
-                    class="navbar-toggler"
-                    type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#mainNav"
-                    aria-controls="mainNav"
-                    aria-expanded="false"
-                    aria-label="Mở menu"
-                >
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse" id="mainNav">
-                    <ul class="navbar-nav ms-auto align-items-lg-center">
-                        <li class="nav-item"><a class="nav-link" href="#features">Giới thiệu</a></li>
-                        <li class="nav-item"><a class="nav-link" href="#stats">Thành tựu</a></li>
-                        <li class="nav-item"><a class="nav-link" href="#courses">Khóa học</a></li>
-                        <li class="nav-item"><a class="nav-link" href="#testimonials">Cảm nhận</a></li>
-                    </ul>
-                    <a class="btn btn-light btn-sm rounded-pill ms-lg-3 mt-3 mt-lg-0" href="{% url 'main:login' %}">Đăng nhập</a>
-                </div>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Global English - Mở ra thế giới với ngôn ngữ toàn cầu</title>
+
+    <!-- Fonts & Libs -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.2"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
+
+    <!-- SCSS -->
+    <link rel="stylesheet" href="{% sass_src 'public/scss/home.scss' %}" />
+  </head>
+
+  <body>
+    <!-- NAV -->
+    <nav class="navbar navbar-expand-lg site-nav" aria-label="Điều hướng chính">
+      <div class="container">
+        <a class="navbar-brand" href="#hero">Global English</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Mở menu">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="mainNav">
+          <ul class="navbar-nav ms-auto align-items-lg-center">
+            {% for link in nav_links %}
+              <li class="nav-item"><a class="nav-link" href="{{ link.href }}">{{ link.label }}</a></li>
+            {% endfor %}
+          </ul>
+          <a class="btn btn-light btn-sm rounded-pill ms-lg-3 mt-3 mt-lg-0" href="{% url 'main:login' %}">Đăng nhập</a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- HERO -->
+    <header id="hero" class="hero" x-data="{ loaded: false }" x-init="setTimeout(() => (loaded = true), 100)">
+      <div class="hero__background"></div>
+
+      <div class="container position-relative">
+        <div class="row align-items-center">
+          <div class="col-lg-6">
+            <div class="hero__content">
+              <p class="hero__eyebrow text-uppercase small fw-semibold mb-3">{{ hero_setting.eyebrow }}</p>
+              <h1 class="hero__title display-4 fw-bold mb-4"
+                  x-data="{ text: '{{ hero_setting.typed_text|escapejs }}', displayedText: '', index: 0 }"
+                  x-init="setTimeout(() => {
+                    const i = setInterval(() => {
+                      if ($data.index < $data.text.length) {
+                        $data.displayedText += $data.text[$data.index]; $data.index += 1;
+                      } else { clearInterval(i); }
+                    }, 90);
+                  }, 400)">
+                <span x-text="displayedText"></span><span class="hero__cursor">|</span>
+              </h1>
+              <p class="hero__subtitle lead mb-4">{{ hero_setting.subtitle }}</p>
+              <div class="d-flex flex-wrap gap-3">
+                <a class="btn btn-light btn-lg rounded-pill px-4 hero__cta" href="{{ hero_setting.primary_cta_href }}">
+                  <i class="fas fa-headset me-2"></i> {{ hero_setting.primary_cta_label }}
+                </a>
+                {% if hero_setting.secondary_cta_label %}
+                <a class="btn btn-outline-light btn-lg rounded-pill px-4" href="{{ hero_setting.secondary_cta_href }}">
+                  <i class="fas fa-play-circle me-2"></i> {{ hero_setting.secondary_cta_label }}
+                </a>
+                {% endif %}
+              </div>
             </div>
-        </nav>
+          </div>
+          <div class="col-lg-6 d-none d-lg-block">
+            <aside class="hero__highlights">
+              {% for highlight in hero_highlights %}
+              <article class="floating-card">
+                <span class="floating-card__icon"><i class="{{ highlight.icon }}"></i></span>
+                <div>
+                  <h3 class="h5 mb-2">{{ highlight.title }}</h3>
+                  <p class="mb-0 text-white-50">{{ highlight.description }}</p>
+                </div>
+              </article>
+              {% endfor %}
+            </aside>
+          </div>
+        </div>
+      </div>
+    </header>
 
-        <header id="hero" class="hero" x-data="{ loaded: false }" x-init="setTimeout(() => (loaded = true), 100)">
-            <div class="hero__background"></div>
+    <main>
+      <!-- FEATURES (giữ nguyên) -->
+      <section class="features" id="features">
+        <div class="container">
+          <div class="text-center mb-5">
+            <h2 class="section-title">Vì sao học viên chọn Global English?</h2>
+            <p class="section-subtitle">Kết hợp phương pháp sư phạm chuyên sâu với trải nghiệm học tập công nghệ cao.</p>
+          </div>
+          <div id="reasonsCarousel" class="carousel slide carousel-multi" data-bs-ride="carousel" data-bs-interval="5000">
+            <div class="carousel-inner">
+              {% if reasons %}
+                {% for feature in reasons %}
+                  {% if forloop.first or forloop.counter0|divisibleby:3 %}
+                  <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                    <div class="row g-4 justify-content-center">
+                  {% endif %}
+                      <div class="col-md-4">
+                        <article class="feature-card animate-on-scroll">
+                          <div class="feature-card__media">
+                            <img src="{{ feature.image_url }}" alt="{{ feature.title }}" class="feature-card__media-image" loading="lazy" />
+                          </div>
+                          <h3 class="feature-card__title">{{ feature.title }}</h3>
+                          <p class="feature-card__body">{{ feature.description }}</p>
+                        </article>
+                      </div>
+                  {% if forloop.counter|divisibleby:3 or forloop.last %}
+                    </div>
+                  </div>
+                  {% endif %}
+                {% endfor %}
+              {% else %}
+                <div class="carousel-item active">
+                  <div class="row justify-content-center">
+                    <div class="col-md-6 text-center text-muted py-4">Nội dung đang được cập nhật.</div>
+                  </div>
+                </div>
+              {% endif %}
+            </div>
+            {% if reasons|length > 3 %}
+              <button class="carousel-control-prev" type="button" data-bs-target="#reasonsCarousel" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Trước</span>
+              </button>
+              <button class="carousel-control-next" type="button" data-bs-target="#reasonsCarousel" data-bs-slide="next">
+                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Sau</span>
+              </button>
+            {% endif %}
+          </div>
+        </div>
+      </section>
 
-            <div class="container position-relative">
-                <div class="row align-items-center">
-                    <div class="col-lg-6">
-                        <div class="hero__content">
-                            <p class="hero__eyebrow text-uppercase small fw-semibold mb-3">Global English</p>
-                            <h1
-                                class="hero__title display-4 fw-bold mb-4"
-                                x-data="{ text: 'Mở ra thế giới với tiếng Anh', displayedText: '', index: 0 }"
-                                x-init="setTimeout(() => {
-                                    const interval = setInterval(() => {
-                                        if ($data.index < $data.text.length) {
-                                            $data.displayedText += $data.text[$data.index];
-                                            $data.index += 1;
-                                        } else {
-                                            clearInterval(interval);
-                                        }
-                                    }, 90);
-                                }, 400)"
-                            >
-                                <span x-text="displayedText"></span><span class="hero__cursor">|</span>
-                            </h1>
-                            <p class="hero__subtitle lead mb-4">
-                                Lộ trình luyện tập cá nhân hóa, lớp học tương tác và hệ thống theo dõi tiến độ giúp bạn
-                                tự tin giao tiếp trong mọi bối cảnh toàn cầu.
-                            </p>
-                            <div class="d-flex flex-wrap gap-3">
-                                <a class="btn btn-light btn-lg rounded-pill px-4 hero__cta" href="#advisory">
-                                    <i class="fas fa-headset me-2"></i> Liên hệ tư vấn
-                                </a>
-                                <button class="btn btn-outline-light btn-lg rounded-pill px-4" type="button">
-                                    <i class="fas fa-play-circle me-2"></i> Xem video giới thiệu
-                                </button>
+      <!-- TEACHERS (giữ nguyên) -->
+      <section class="teachers" id="teachers">
+        <div class="container">
+            <div class="text-center mb-5">
+            <h2 class="section-title">Đội ngũ giảng viên</h2>
+            <p class="section-subtitle">Đồng hành cùng giáo viên bản ngữ, chứng nhận quốc tế.</p>
+            </div>
+
+            <div id="teachersCarousel" class="carousel slide carousel-multi" data-bs-ride="carousel" data-bs-interval="5000">
+            <div class="carousel-inner">
+                {% if teachers %}
+                {% for teacher in teachers %}
+                    {% if forloop.first or forloop.counter0|divisibleby:3 %}
+                    <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                    <div class="row g-4">
+                    {% endif %}
+
+                        <div class="col-md-6 col-lg-4">
+                        <!-- NEW structure: giống graduates -->
+                        <article class="teacher-card animate-on-scroll" tabindex="0" aria-label="Giảng viên {{ teacher.name }}">
+                            <div class="teacher-media">
+                            <img src="{{ teacher.avatar_url }}" alt="{{ teacher.name }}" class="teacher-img" loading="lazy" />
+                            <!-- Tên luôn hiển thị khi chưa hover -->
+                            <div class="teacher-name-pill"><span class="name">{{ teacher.name }}</span></div>
+
+                            <!-- Overlay + panel trượt lên khi hover/tap -->
+                            <div class="teacher-overlay" aria-hidden="true">
+                                <div class="teacher-panel">
+                                <h3 class="name">{{ teacher.name }}</h3>
+                                <p class="meta">
+                                    {% if teacher.role %}<span class="role">{{ teacher.role }}</span>{% endif %}
+                                    {% if teacher.experience_years %}
+                                    <span class="dot">•</span><span class="exp">{{ teacher.experience_years }} năm kinh nghiệm</span>
+                                    {% endif %}
+                                </p>
+                                {% if teacher.bio %}
+                                    <p class="bio">{{ teacher.bio }}</p>
+                                {% endif %}
+                                </div>
                             </div>
+                            </div>
+                        </article>
                         </div>
-                    </div>
-                    <div class="col-lg-6 d-none d-lg-block">
-                        <aside class="hero__highlights">
-                            <article class="floating-card">
-                                <span class="floating-card__icon">
-                                    <i class="fas fa-graduation-cap"></i>
-                                </span>
-                                <div>
-                                    <h3 class="h5 mb-2">Giảng viên bản ngữ</h3>
-                                    <p class="mb-0 text-white-50">
-                                        Đội ngũ chuyên gia sở hữu chứng chỉ sư phạm quốc tế, luôn đồng hành cùng bạn.
-                                    </p>
-                                </div>
-                            </article>
-                            <article class="floating-card">
-                                <span class="floating-card__icon">
-                                    <i class="fas fa-chalkboard"></i>
-                                </span>
-                                <div>
-                                    <h3 class="h5 mb-2">Lớp học tương tác</h3>
-                                    <p class="mb-0 text-white-50">
-                                        Ứng dụng công nghệ hiện đại và phương pháp đào tạo chú trọng thực hành.
-                                    </p>
-                                </div>
-                            </article>
-                            <article class="floating-card">
-                                <span class="floating-card__icon">
-                                    <i class="fas fa-certificate"></i>
-                                </span>
-                                <div>
-                                    <h3 class="h5 mb-2">Chứng chỉ toàn cầu</h3>
-                                    <p class="mb-0 text-white-50">
-                                        Cam kết thành tích với hệ thống kiểm tra chuẩn quốc tế và giám sát tiến độ liên tục.
-                                    </p>
-                                </div>
-                            </article>
-                        </aside>
-                    </div>
-                </div>
-            </div>
-        </header>
 
-        <main>
-            <section class="features" id="features" aria-labelledby="features-title">
-                <div class="container">
-                    <div class="text-center mb-5">
-                        <h2 id="features-title" class="section-title">Vì sao học viên chọn Global English?</h2>
-                        <p class="section-subtitle">
-                            Kết hợp phương pháp sư phạm chuyên sâu với trải nghiệm học tập công nghệ cao.
-                        </p>
+                    {% if forloop.counter|divisibleby:3 or forloop.last %}
                     </div>
-
-                    <div class="row g-4">
-                        <div class="col-md-4">
-                            <article class="feature-card animate-on-scroll">
-                                <div class="feature-card__icon">
-                                    <i class="fas fa-user-friends"></i>
-                                </div>
-                                <h3 class="feature-card__title">Sĩ số tinh gọn</h3>
-                                <p class="feature-card__body">
-                                    Chỉ 6–8 học viên mỗi lớp giúp giảng viên kèm cặp sát sao và phản hồi kịp thời.
-                                </p>
-                            </article>
-                        </div>
-                        <div class="col-md-4">
-                            <article class="feature-card animate-on-scroll">
-                                <div class="feature-card__icon">
-                                    <i class="fas fa-laptop-code"></i>
-                                </div>
-                                <h3 class="feature-card__title">Nền tảng số thông minh</h3>
-                                <p class="feature-card__body">
-                                    AI phân tích điểm mạnh-yếu và gợi ý bài luyện tập phù hợp từng mục tiêu cá nhân.
-                                </p>
-                            </article>
-                        </div>
-                        <div class="col-md-4">
-                            <article class="feature-card animate-on-scroll">
-                                <div class="feature-card__icon">
-                                    <i class="fas fa-globe-americas"></i>
-                                </div>
-                                <h3 class="feature-card__title">Cộng đồng quốc tế</h3>
-                                <p class="feature-card__body">
-                                    Mở rộng mạng lưới với học viên toàn cầu qua các buổi giao lưu văn hóa định kỳ.
-                                </p>
-                            </article>
-                        </div>
                     </div>
-                </div>
-            </section>
-
-            <section class="stats" id="stats" aria-labelledby="stats-title">
-                <div class="container">
-                    <div class="row gy-4">
-                        <div class="col-6 col-md-3">
-                            <article class="stat-card text-center">
-                                <h3
-                                    class="stat-card__value"
-                                    x-data="{ count: 0, target: 10000 }"
-                                    x-init="setTimeout(() => {
-                                        const interval = setInterval(() => {
-                                            if ($data.count < $data.target) {
-                                                $data.count += 200;
-                                            } else {
-                                                $data.count = $data.target;
-                                                clearInterval(interval);
-                                            }
-                                        }, 20);
-                                    }, 400)"
-                                    x-text="count.toLocaleString('vi-VN') + '+'"
-                                ></h3>
-                                <p class="stat-card__label">Học viên tin tưởng</p>
-                            </article>
-                        </div>
-                        <div class="col-6 col-md-3">
-                            <article class="stat-card text-center">
-                                <h3
-                                    class="stat-card__value"
-                                    x-data="{ count: 0, target: 150 }"
-                                    x-init="setTimeout(() => {
-                                        const interval = setInterval(() => {
-                                            if ($data.count < $data.target) {
-                                                $data.count += 3;
-                                            } else {
-                                                $data.count = $data.target;
-                                                clearInterval(interval);
-                                            }
-                                        }, 20);
-                                    }, 650)"
-                                    x-text="count.toLocaleString('vi-VN') + '+'"
-                                ></h3>
-                                <p class="stat-card__label">Giảng viên quốc tế</p>
-                            </article>
-                        </div>
-                        <div class="col-6 col-md-3">
-                            <article class="stat-card text-center">
-                                <h3
-                                    class="stat-card__value"
-                                    x-data="{ count: 0, target: 95 }"
-                                    x-init="setTimeout(() => {
-                                        const interval = setInterval(() => {
-                                            if ($data.count < $data.target) {
-                                                $data.count += 1.8;
-                                            } else {
-                                                $data.count = $data.target;
-                                                clearInterval(interval);
-                                            }
-                                        }, 20);
-                                    }, 900)"
-                                    x-text="count.toLocaleString('vi-VN') + '%'"
-                                ></h3>
-                                <p class="stat-card__label">Tỉ lệ hài lòng</p>
-                            </article>
-                        </div>
-                        <div class="col-6 col-md-3">
-                            <article class="stat-card text-center">
-                                <h3
-                                    class="stat-card__value"
-                                    x-data="{ count: 0, target: 12 }"
-                                    x-init="setTimeout(() => {
-                                        const interval = setInterval(() => {
-                                            if ($data.count < $data.target) {
-                                                $data.count += 0.2;
-                                            } else {
-                                                $data.count = $data.target;
-                                                clearInterval(interval);
-                                            }
-                                        }, 20);
-                                    }, 1150)"
-                                    x-text="count.toLocaleString('vi-VN') + '+'"
-                                ></h3>
-                                <p class="stat-card__label">Năm kinh nghiệm</p>
-                            </article>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <section class="courses" id="courses" aria-labelledby="courses-title">
-                <div class="container">
-                    <div class="text-center mb-5">
-                        <h2 id="courses-title" class="section-title">Chương trình nổi bật</h2>
-                        <p class="section-subtitle">Lựa chọn khóa học phù hợp với mục tiêu và trình độ của bạn.</p>
-                    </div>
-
-                    <div class="row g-4">
-                        <div class="col-md-4">
-                            <article class="course-card animate-on-scroll">
-                                <div class="course-card__visual">
-                                    <i class="fas fa-comments"></i>
-                                </div>
-                                <div class="course-card__body">
-                                    <h3 class="course-card__title">Tiếng Anh giao tiếp</h3>
-                                    <p class="course-card__description">
-                                        Tự tin giao tiếp trong mọi tình huống với các buổi luyện phản xạ thực tế.
-                                    </p>
-                                    <div class="course-card__meta">
-                                        <span><i class="far fa-clock me-1"></i> 3 tháng</span>
-                                        <span><i class="fas fa-user-friends me-1"></i> Mọi trình độ</span>
-                                    </div>
-                                </div>
-                            </article>
-                        </div>
-                        <div class="col-md-4">
-                            <article class="course-card animate-on-scroll">
-                                <div class="course-card__visual">
-                                    <i class="fas fa-briefcase"></i>
-                                </div>
-                                <div class="course-card__body">
-                                    <h3 class="course-card__title">Tiếng Anh thương mại</h3>
-                                    <p class="course-card__description">
-                                        Làm chủ kỹ năng thuyết trình, đàm phán và viết email chuyên nghiệp.
-                                    </p>
-                                    <div class="course-card__meta">
-                                        <span><i class="far fa-clock me-1"></i> 4 tháng</span>
-                                        <span><i class="fas fa-user-friends me-1"></i> Trung cấp</span>
-                                    </div>
-                                </div>
-                            </article>
-                        </div>
-                        <div class="col-md-4">
-                            <article class="course-card animate-on-scroll">
-                                <div class="course-card__visual">
-                                    <i class="fas fa-passport"></i>
-                                </div>
-                                <div class="course-card__body">
-                                    <h3 class="course-card__title">Luyện thi IELTS</h3>
-                                    <p class="course-card__description">
-                                        Lộ trình chuyên sâu với ngân hàng đề cập nhật và phản hồi chi tiết từng kỹ năng.
-                                    </p>
-                                    <div class="course-card__meta">
-                                        <span><i class="far fa-clock me-1"></i> 6 tháng</span>
-                                        <span><i class="fas fa-user-friends me-1"></i> Trung cấp+</span>
-                                    </div>
-                                </div>
-                            </article>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <section class="testimonials" id="testimonials" aria-labelledby="testimonials-title">
-                <div class="container">
-                    <div class="text-center mb-5">
-                        <h2 id="testimonials-title" class="section-title">Câu chuyện thành công</h2>
-                        <p class="section-subtitle">Nghe học viên chia sẻ trải nghiệm thực tế sau khóa học.</p>
-                    </div>
-
-                    <div class="row g-4">
-                        <div class="col-md-4">
-                            <article class="testimonial-card animate-on-scroll">
-                                <p class="testimonial-card__quote">
-                                    “Chương trình bám sát nhu cầu công việc, giúp tôi tự tin trình bày dự án trước khách hàng quốc tế.”
-                                </p>
-                                <div class="testimonial-card__author">
-                                    <span class="testimonial-card__avatar">ML</span>
-                                    <div>
-                                        <p class="h6 mb-1">Minh Long</p>
-                                        <p class="mb-0 text-muted">Học viên Business English</p>
-                                    </div>
-                                </div>
-                            </article>
-                        </div>
-                        <div class="col-md-4">
-                            <article class="testimonial-card animate-on-scroll">
-                                <p class="testimonial-card__quote">
-                                    “Lớp học tương tác, giáo viên sửa lỗi kỹ giúp phát âm của tôi cải thiện rõ rệt chỉ sau vài tuần.”
-                                </p>
-                                <div class="testimonial-card__author">
-                                    <span class="testimonial-card__avatar">TH</span>
-                                    <div>
-                                        <p class="h6 mb-1">Thu Hà</p>
-                                        <p class="mb-0 text-muted">Học viên Giao Tiếp 360°</p>
-                                    </div>
-                                </div>
-                            </article>
-                        </div>
-                        <div class="col-md-4">
-                            <article class="testimonial-card animate-on-scroll">
-                                <p class="testimonial-card__quote">
-                                    “Nhờ giáo trình sát đề thi và lịch học linh hoạt, tôi đã đạt IELTS 7.5 chỉ sau 6 tháng.”
-                                </p>
-                                <div class="testimonial-card__author">
-                                    <span class="testimonial-card__avatar">VT</span>
-                                    <div>
-                                        <p class="h6 mb-1">Văn Tú</p>
-                                        <p class="mb-0 text-muted">Học viên IELTS Mastery</p>
-                                    </div>
-                                </div>
-                            </article>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <section class="advisory" id="advisory" aria-labelledby="advisory-title">
-                <div class="container">
+                    {% endif %}
+                {% endfor %}
+                {% else %}
+                <div class="carousel-item active">
                     <div class="row justify-content-center">
-                        <div class="col-lg-8">
-                            <div class="advisory-card">
-                                <h2 id="advisory-title" class="advisory-title text-center">
-                                    Cần tư vấn lộ trình học phù hợp?
-                                </h2>
-                                <p class="advisory-subtitle text-center">
-                                    Nhập thông tin bên dưới, đội ngũ tư vấn sẽ liên hệ và cung cấp tài khoản học cho bạn trong 24 giờ.
-                                </p>
-                                <form class="row g-3" hx-post="/api/advisory" hx-target="#advisory-response" hx-swap="innerHTML">
-                                    <div class="col-md-6">
-                                        <label for="adv-name" class="form-label">Họ và tên</label>
-                                        <input
-                                            type="text"
-                                            class="form-control form-control-lg"
-                                            id="adv-name"
-                                            placeholder="Nguyễn Văn A"
-                                            required
-                                        />
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label for="adv-phone" class="form-label">Số điện thoại</label>
-                                        <input
-                                            type="tel"
-                                            class="form-control form-control-lg"
-                                            id="adv-phone"
-                                            placeholder="09xx xxx xxx"
-                                            required
-                                        />
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label for="adv-email" class="form-label">Email</label>
-                                        <input
-                                            type="email"
-                                            class="form-control form-control-lg"
-                                            id="adv-email"
-                                            placeholder="ban@example.com"
-                                            required
-                                        />
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label for="adv-goal" class="form-label">Mục tiêu</label>
-                                        <select id="adv-goal" class="form-select form-select-lg" required>
-                                            <option value="">Chọn mục tiêu</option>
-                                            <option value="communication">Cải thiện giao tiếp</option>
-                                            <option value="business">Tiếng Anh công việc</option>
-                                            <option value="ielts">Luyện thi IELTS</option>
-                                            <option value="kids">Khóa học thiếu nhi</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-12">
-                                        <label for="adv-message" class="form-label">Nhu cầu cụ thể</label>
-                                        <textarea
-                                            id="adv-message"
-                                            class="form-control"
-                                            rows="4"
-                                            placeholder="Chia sẻ thêm về kỳ vọng hoặc thời gian học của bạn..."
-                                        ></textarea>
-                                    </div>
-                                    <div class="col-12">
-                                        <button type="submit" class="btn btn-primary btn-lg w-100 rounded-pill">
-                                            <i class="fas fa-paper-plane me-2"></i> Gửi yêu cầu tư vấn
-                                        </button>
-                                    </div>
-                                </form>
-                                <div id="advisory-response" class="mt-3 text-center"></div>
-                            </div>
-                        </div>
+                    <div class="col-md-8 text-center text-muted py-4">Thông tin giảng viên đang được cập nhật.</div>
                     </div>
                 </div>
-            </section>
-        </main>
-
-        <footer class="site-footer">
-            <div class="container">
-                <div class="row gy-4">
-                    <div class="col-lg-4">
-                        <h3 class="site-footer__title">Global English</h3>
-                        <p class="site-footer__text">
-                            Trung tâm đào tạo tiếng Anh toàn diện với sứ mệnh giúp người Việt làm chủ ngôn ngữ quốc tế.
-                        </p>
-                        <nav class="site-footer__social" aria-label="Kênh mạng xã hội">
-                            <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
-                            <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
-                            <a href="#" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
-                            <a href="#" aria-label="TikTok"><i class="fab fa-tiktok"></i></a>
-                        </nav>
-                    </div>
-                    <div class="col-6 col-lg-2">
-                        <h4 class="site-footer__column-title">Chương trình</h4>
-                        <ul class="site-footer__links list-unstyled">
-                            <li><a href="#features">Tiếng Anh giao tiếp</a></li>
-                            <li><a href="#courses">Tiếng Anh thương mại</a></li>
-                            <li><a href="#courses">Luyện thi IELTS</a></li>
-                            <li><a href="#courses">Tiếng Anh trẻ em</a></li>
-                        </ul>
-                    </div>
-                    <div class="col-6 col-lg-2">
-                        <h4 class="site-footer__column-title">Về chúng tôi</h4>
-                        <ul class="site-footer__links list-unstyled">
-                            <li><a href="#features">Giới thiệu</a></li>
-                            <li><a href="#features">Đội ngũ giảng viên</a></li>
-                            <li><a href="#features">Phương pháp đào tạo</a></li>
-                            <li><a href="#features">Cơ sở vật chất</a></li>
-                        </ul>
-                    </div>
-                    <div class="col-lg-4">
-                        <h4 class="site-footer__column-title">Liên hệ</h4>
-                        <ul class="site-footer__info list-unstyled">
-                            <li>
-                                <i class="fas fa-map-marker-alt me-2"></i>123 Nguyễn Văn Linh, Quận 7, TP. Hồ Chí Minh
-                            </li>
-                            <li><i class="fas fa-phone me-2"></i>(028) 1234 5678</li>
-                            <li><i class="fas fa-envelope me-2"></i>info@globalenglish.edu.vn</li>
-                        </ul>
-                    </div>
-                </div>
-                <hr class="site-footer__divider" />
-                <div class="d-flex flex-column flex-md-row justify-content-between align-items-center">
-                    <p class="mb-2 mb-md-0">© 2025 Global English. Tất cả quyền được bảo lưu.</p>
-                    <p class="mb-0">Phát triển với niềm đam mê dành cho cộng đồng học tiếng Anh.</p>
-                </div>
+                {% endif %}
             </div>
-        </footer>
 
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-        <script src="{% static 'public/js/home.js' %}"></script>
-    </body>
+            {% if teachers|length > 3 %}
+                <button class="carousel-control-prev" type="button" data-bs-target="#teachersCarousel" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Trước</span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#teachersCarousel" data-bs-slide="next">
+                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Sau</span>
+                </button>
+            {% endif %}
+            </div>
+        </div>
+        </section>
+
+
+      <!-- STATS & COURSES (giữ nguyên cấu trúc) -->
+      <section class="stats" id="stats">
+        <div class="container">
+          <div id="statsCarousel" class="carousel slide carousel-multi" data-bs-ride="carousel" data-bs-interval="5000">
+            <div class="carousel-inner">
+              {% if stats %}
+                {% for stat in stats %}
+                  {% if forloop.first or forloop.counter0|divisibleby:4 %}
+                  <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                    <div class="row gy-4">
+                  {% endif %}
+                      <div class="col-6 col-md-3">
+                        <article class="stat-card text-center">
+                          <h3 class="stat-card__value"
+                              x-data="{ count: 0, target: {{ stat.value }}, step: {{ stat.step }} }"
+                              x-init="setTimeout(() => { const i = setInterval(() => { if ($data.count < $data.target) { $data.count = Math.min($data.target, $data.count + $data.step); } else { clearInterval(i); } }, 20); }, {{ stat.delay }})"
+                              x-text="Number($data.count).toLocaleString('vi-VN') + '{{ stat.suffix }}'"></h3>
+                          <p class="stat-card__label">{{ stat.label }}</p>
+                        </article>
+                      </div>
+                  {% if forloop.counter|divisibleby:4 or forloop.last %}
+                    </div>
+                  </div>
+                  {% endif %}
+                {% endfor %}
+              {% else %}
+                <div class="carousel-item active">
+                  <div class="row justify-content-center">
+                    <div class="col-md-6 text-center text-muted py-4">Thống kê đang được cập nhật.</div>
+                  </div>
+                </div>
+              {% endif %}
+            </div>
+            {% if stats|length > 4 %}
+              <button class="carousel-control-prev" type="button" data-bs-target="#statsCarousel" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Trước</span>
+              </button>
+              <button class="carousel-control-next" type="button" data-bs-target="#statsCarousel" data-bs-slide="next">
+                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Sau</span>
+              </button>
+            {% endif %}
+          </div>
+        </div>
+      </section>
+
+      <section class="courses" id="courses">
+        <div class="container">
+          <div class="text-center mb-5">
+            <h2 class="section-title">Chương trình nổi bật</h2>
+            <p class="section-subtitle">Lựa chọn khóa học phù hợp với mục tiêu và trình độ của bạn.</p>
+          </div>
+
+          <div id="coursesCarousel" class="carousel slide carousel-multi" data-bs-ride="carousel" data-bs-interval="5000">
+            <div class="carousel-inner">
+              {% if courses %}
+                {% for course in courses %}
+                  {% if forloop.first or forloop.counter0|divisibleby:3 %}
+                  <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                    <div class="row g-4">
+                  {% endif %}
+                      <div class="col-md-4">
+                        <article class="course-card animate-on-scroll">
+                          <div class="course-card__visual"><i class="{{ course.icon }}"></i></div>
+                          <div class="course-card__body">
+                            <h3 class="course-card__title">{{ course.title }}</h3>
+                            <p class="course-card__description">{{ course.description }}</p>
+                            <div class="course-card__meta">
+                              <span><i class="far fa-clock me-1"></i> {{ course.duration }}</span>
+                              <span><i class="fas fa-user-friends me-1"></i> {{ course.level }}</span>
+                            </div>
+                          </div>
+                        </article>
+                      </div>
+                  {% if forloop.counter|divisibleby:3 or forloop.last %}
+                    </div>
+                  </div>
+                  {% endif %}
+                {% endfor %}
+              {% else %}
+                <div class="carousel-item active">
+                  <div class="row justify-content-center">
+                    <div class="col-md-8 text-center text-muted py-4">Chương trình đang được cập nhật.</div>
+                  </div>
+                </div>
+              {% endif %}
+            </div>
+            {% if courses|length > 3 %}
+              <button class="carousel-control-prev" type="button" data-bs-target="#coursesCarousel" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Trước</span>
+              </button>
+              <button class="carousel-control-next" type="button" data-bs-target="#coursesCarousel" data-bs-slide="next">
+                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Sau</span>
+              </button>
+            {% endif %}
+          </div>
+        </div>
+      </section>
+
+      <!-- ======= GRADUATES (ĐÃ SỬA THEO YÊU CẦU) ======= -->
+      <section class="graduates" id="graduates">
+        <div class="container">
+          <div class="text-center mb-5">
+            <h2 class="section-title">Học viên tốt nghiệp xuất sắc</h2>
+          </div>
+          <div class="row g-4">
+            {% if graduates %}
+              {% for graduate in graduates %}
+              <div class="col-sm-6 col-lg-4">
+                <article class="graduate-card animate-on-scroll" tabindex="0" aria-label="Học viên {{ graduate.name }}">
+                  <div class="graduate-media">
+                    <img src="{{ graduate.photo_url }}" alt="{{ graduate.name }}" class="graduate-img" loading="lazy" />
+                    <!-- Tên luôn hiển thị khi chưa hover -->
+                    <div class="graduate-name-pill"><span class="name">{{ graduate.name }}</span></div>
+                    <!-- Overlay + Panel trượt lên khi hover/tap -->
+                    <div class="graduate-overlay" aria-hidden="true">
+                      <div class="graduate-panel">
+                        <h3 class="name">{{ graduate.name }}</h3>
+                        <p class="meta">
+                          <span class="course">{{ graduate.course }}</span>
+                          {% if graduate.score %}<span class="dot">•</span><span class="score">{{ graduate.score }}</span>{% endif %}
+                        </p>
+                        {% if graduate.testimonial %}
+                        <p class="quote">“{{ graduate.testimonial }}”</p>
+                        {% endif %}
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              </div>
+              {% endfor %}
+            {% else %}
+              <div class="col-12 text-center text-muted">Danh sách học viên xuất sắc đang được cập nhật.</div>
+            {% endif %}
+          </div>
+        </div>
+      </section>
+
+      <!-- TESTIMONIALS + ADVISORY (giữ nguyên) -->
+      <section class="testimonials" id="testimonials">
+        <div class="container">
+          <div class="text-center mb-5">
+            <h2 class="section-title">Câu chuyện thành công</h2>
+            <p class="section-subtitle">Nghe học viên chia sẻ trải nghiệm thực tế sau khóa học.</p>
+          </div>
+
+          <div id="testimonialsCarousel" class="carousel slide carousel-multi" data-bs-ride="carousel" data-bs-interval="5000">
+            <div class="carousel-inner">
+              {% if testimonials %}
+                {% for testimonial in testimonials %}
+                  {% if forloop.first or forloop.counter0|divisibleby:3 %}
+                  <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                    <div class="row g-4">
+                  {% endif %}
+                      <div class="col-md-4">
+                        <article class="testimonial-card animate-on-scroll">
+                          <p class="testimonial-card__quote">{{ testimonial.quote }}</p>
+                          <div class="testimonial-card__author">
+                            <span class="testimonial-card__avatar">{{ testimonial.initials }}</span>
+                            <div>
+                              <p class="h6 mb-1">{{ testimonial.name }}</p>
+                              <p class="mb-0 text-muted">{{ testimonial.program }}</p>
+                            </div>
+                          </div>
+                        </article>
+                      </div>
+                  {% if forloop.counter|divisibleby:3 or forloop.last %}
+                    </div>
+                  </div>
+                  {% endif %}
+                {% endfor %}
+              {% else %}
+                <div class="carousel-item active">
+                  <div class="row justify-content-center">
+                    <div class="col-md-8 text-center text-muted py-4">Chúng tôi sẽ cập nhật cảm nhận của học viên trong thời gian tới.</div>
+                  </div>
+                </div>
+              {% endif %}
+            </div>
+            {% if testimonials|length > 3 %}
+              <button class="carousel-control-prev" type="button" data-bs-target="#testimonialsCarousel" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Trước</span>
+              </button>
+              <button class="carousel-control-next" type="button" data-bs-target="#testimonialsCarousel" data-bs-slide="next">
+                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Sau</span>
+              </button>
+            {% endif %}
+          </div>
+        </div>
+      </section>
+
+      <section class="advisory" id="advisory">
+        <div class="container">
+          <div class="row justify-content-center">
+            <div class="col-lg-8">
+              <div class="advisory-card">
+                <h2 class="advisory-title text-center">Cần tư vấn lộ trình học phù hợp?</h2>
+                <p class="advisory-subtitle text-center">Nhập thông tin, đội ngũ tư vấn sẽ liên hệ sớm nhất.</p>
+                <form class="row g-3" hx-post="/api/advisory" hx-target="#advisory-response" hx-swap="innerHTML">
+                  <div class="col-md-6">
+                    <label for="adv-name" class="form-label">Họ và tên</label>
+                    <input id="adv-name" class="form-control form-control-lg" placeholder="Nguyễn Văn A" required />
+                  </div>
+                  <div class="col-md-6">
+                    <label for="adv-phone" class="form-label">Số điện thoại</label>
+                    <input id="adv-phone" type="tel" class="form-control form-control-lg" placeholder="09xx xxx xxx" required />
+                  </div>
+                  <div class="col-md-6">
+                    <label for="adv-email" class="form-label">Email</label>
+                    <input id="adv-email" type="email" class="form-control form-control-lg" placeholder="ban@example.com" required />
+                  </div>
+                  <div class="col-md-6">
+                    <label for="adv-goal" class="form-label">Mục tiêu</label>
+                    <select id="adv-goal" class="form-select form-select-lg" required>
+                      <option value="">Chọn mục tiêu</option>
+                      <option value="communication">Cải thiện giao tiếp</option>
+                      <option value="business">Tiếng Anh công việc</option>
+                      <option value="ielts">Luyện thi IELTS</option>
+                      <option value="kids">Khóa học thiếu nhi</option>
+                    </select>
+                  </div>
+                  <div class="col-12">
+                    <label for="adv-message" class="form-label">Nhu cầu cụ thể</label>
+                    <textarea id="adv-message" class="form-control" rows="4" placeholder="Chia sẻ thêm về kỳ vọng hoặc thời gian học của bạn..."></textarea>
+                  </div>
+                  <div class="col-12">
+                    <button type="submit" class="btn btn-primary btn-lg w-100 rounded-pill">
+                      <i class="fas fa-paper-plane me-2"></i> Gửi yêu cầu tư vấn
+                    </button>
+                  </div>
+                </form>
+                <div id="advisory-response" class="mt-3 text-center"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="site-footer">
+      <div class="container">
+        <div class="row gy-4">
+          <div class="col-lg-4">
+            <h3 class="site-footer__title">Global English</h3>
+            <p class="site-footer__text">Trung tâm đào tạo tiếng Anh toàn diện.</p>
+            <nav class="site-footer__social" aria-label="Kênh mạng xã hội">
+              <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+              <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+              <a href="#" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
+              <a href="#" aria-label="TikTok"><i class="fab fa-tiktok"></i></a>
+            </nav>
+          </div>
+          <div class="col-6 col-lg-2">
+            <h4 class="site-footer__column-title">Chương trình</h4>
+            <ul class="site-footer__links list-unstyled">
+              {% for item in footer_programs %}<li><a href="{{ item.href }}">{{ item.label }}</a></li>{% endfor %}
+            </ul>
+          </div>
+          <div class="col-6 col-lg-2">
+            <h4 class="site-footer__column-title">Về chúng tôi</h4>
+            <ul class="site-footer__links list-unstyled">
+              {% for item in footer_about %}<li><a href="{{ item.href }}">{{ item.label }}</a></li>{% endfor %}
+            </ul>
+          </div>
+          <div class="col-lg-4">
+            <h4 class="site-footer__column-title">Liên hệ</h4>
+            <ul class="site-footer__info list-unstyled">
+              <li><i class="fas fa-map-marker-alt me-2"></i>123 Nguyễn Văn Linh, Quận 7, TP.HCM</li>
+              <li><i class="fas fa-phone me-2"></i>(028) 1234 5678</li>
+              <li><i class="fas fa-envelope me-2"></i>info@globalenglish.edu.vn</li>
+            </ul>
+          </div>
+        </div>
+        <hr class="site-footer__divider" />
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center">
+          <p class="mb-2 mb-md-0">© {{ now|date:"Y" }} Global English. All rights reserved.</p>
+          <p class="mb-0">Phát triển vì cộng đồng học tiếng Anh.</p>
+        </div>
+      </div>
+    </footer>
+
+    <!-- JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{% static 'public/js/home.js' %}"></script>
+  </body>
 </html>

@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --primary: #4f46e5;
   --secondary: #6c63ff;
   --accent: #a5b4ff;
@@ -214,16 +214,18 @@ body {
   box-shadow: 0 28px 65px rgba(79, 70, 229, 0.16);
 }
 
-.feature-card__icon {
-  width: 64px;
-  height: 64px;
-  border-radius: 18px;
-  display: grid;
-  place-items: center;
-  font-size: 1.8rem;
-  color: var(--primary);
-  background: rgba(79, 70, 229, 0.12);
+.feature-card__media {
+  width: 100%;
+  border-radius: 1rem;
+  overflow: hidden;
   margin-bottom: 1.5rem;
+  background: rgba(79, 70, 229, 0.08);
+}
+.feature-card__media-image {
+  display: block;
+  width: 100%;
+  height: clamp(180px, 28vw, 220px);
+  object-fit: cover;
 }
 
 .feature-card__title {
@@ -236,6 +238,168 @@ body {
 .feature-card__body {
   color: var(--text-muted);
   margin: 0;
+}
+
+.teachers {
+  padding: 5rem 0;
+}
+.teacher-card {
+  background: #ffffff;
+  border-radius: 1.5rem;
+  overflow: hidden;
+  box-shadow: 0 20px 55px rgba(79, 70, 229, 0.12);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.teacher-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 32px 80px rgba(79, 70, 229, 0.18);
+}
+.teacher-card__image-wrap {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: rgba(79, 70, 229, 0.08);
+}
+.teacher-card__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.teacher-card__body {
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  flex-grow: 1;
+}
+.teacher-card__name {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text);
+}
+.teacher-card__role {
+  font-weight: 600;
+  color: var(--primary);
+  margin: 0;
+}
+.teacher-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text);
+  font-weight: 500;
+  margin: 0;
+}
+.teacher-card__meta i {
+  color: var(--primary);
+}
+.teacher-card__bio {
+  color: var(--text-muted);
+  margin: 0;
+
+.graduates {
+  padding: 5rem 0;
+  background: var(--surface);
+}
+.graduate-card {
+  background: #ffffff;
+  border-radius: 1.5rem;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(79, 70, 229, 0.12);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.graduate-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 32px 85px rgba(79, 70, 229, 0.18);
+}
+.graduate-card__photo-wrap {
+  position: relative;
+  padding-top: 68%;
+  background: rgba(79, 70, 229, 0.12);
+}
+.graduate-card__photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.graduate-card__body {
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex-grow: 1;
+}
+.graduate-card__name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text);
+}
+.graduate-card__course {
+  margin: 0;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.graduate-card__score {
+  margin: 0;
+  font-weight: 600;
+  color: var(--primary);
+}
+.graduate-card__testimonial {
+  margin: 0;
+  color: var(--text);
+  font-style: italic;
+}
+
+}
+
+.carousel-multi {
+  position: relative;
+  margin-bottom: 2rem;
+}
+.carousel-multi .carousel-item {
+  padding: 0.5rem 0;
+}
+.carousel-multi .carousel-control-prev,
+.carousel-multi .carousel-control-next {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: rgba(79, 70, 229, 0.85);
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.9;
+}
+.carousel-multi .carousel-control-prev-icon,
+.carousel-multi .carousel-control-next-icon {
+  filter: invert(1);
+}
+.carousel-multi .carousel-control-prev:hover,
+.carousel-multi .carousel-control-next:hover {
+  opacity: 1;
+}
+.carousel-multi .carousel-control-prev:focus,
+.carousel-multi .carousel-control-next:focus {
+  box-shadow: none;
+}
+.carousel-multi .carousel-item .row {
+  margin-left: 0;
+  margin-right: 0;
+}
+.carousel-multi .carousel-item .col-md-4,
+.carousel-multi .carousel-item .col-md-6,
+.carousel-multi .carousel-item .col-6,
+.carousel-multi .carousel-item .col-md-3 {
+  padding-bottom: 1rem;
 }
 
 .stats {
@@ -515,5 +679,10 @@ body {
   }
   .hero__title {
     font-size: 2.4rem;
+  }
+  .carousel-multi .carousel-control-prev,
+  .carousel-multi .carousel-control-next {
+    width: 36px;
+    height: 36px;
   }
 }

@@ -14,6 +14,7 @@
     --nav-height: 86px;
 }
 
+/* Reset và Base Styles */
 html {
     scroll-behavior: smooth;
     scroll-padding-top: calc(var(--nav-height) + 16px);
@@ -31,6 +32,29 @@ body {
     margin: 0;
 }
 
+/* Animations */
+@keyframes blink {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 1; }
+}
+
+.hero__cursor,
+.blinking-cursor {
+    animation: blink 1s steps(2, start) infinite;
+}
+
+.animate-on-scroll {
+    opacity: 0;
+    transform: translateY(35px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.animate-on-scroll.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Navigation */
 .site-nav {
     position: fixed;
     top: 0;
@@ -90,6 +114,7 @@ body {
     padding: 0.75rem 2.1rem;
 }
 
+/* Hero Section */
 .hero {
     position: relative;
     min-height: calc(100vh - var(--nav-height));
@@ -139,12 +164,6 @@ body {
     line-height: 1.1;
 }
 
-.hero__cursor {
-    display: inline-block;
-    margin-left: 0.1rem;
-    animation: blink 1s steps(2, start) infinite;
-}
-
 .hero__subtitle {
     color: rgba(239, 246, 255, 0.88);
 }
@@ -187,6 +206,7 @@ body {
     font-size: 1.5rem;
 }
 
+/* Common Section Styles */
 .section-title {
     font-size: clamp(2rem, 4vw, 2.75rem);
     font-weight: 700;
@@ -200,6 +220,7 @@ body {
     color: var(--text-muted);
 }
 
+/* Features Section */
 .features {
     padding: 5rem 0;
 }
@@ -218,16 +239,19 @@ body {
     box-shadow: 0 28px 65px rgba(79, 70, 229, 0.16);
 }
 
-.feature-card__icon {
-    width: 64px;
-    height: 64px;
-    border-radius: 18px;
-    display: grid;
-    place-items: center;
-    font-size: 1.8rem;
-    color: var(--primary);
-    background: rgba(79, 70, 229, 0.12);
+.feature-card__media {
+    width: 100%;
+    border-radius: 1rem;
+    overflow: hidden;
     margin-bottom: 1.5rem;
+    background: rgba(79, 70, 229, 0.08);
+}
+
+.feature-card__media-image {
+    display: block;
+    width: 100%;
+    height: clamp(180px, 28vw, 220px);
+    object-fit: cover;
 }
 
 .feature-card__title {
@@ -242,6 +266,339 @@ body {
     margin: 0;
 }
 
+/* Teachers Section */
+.teachers {
+    padding: 5rem 0;
+}
+
+.teacher-card {
+    position: relative;
+    border-radius: 1rem;
+    overflow: hidden;
+    cursor: pointer;
+    outline: none;
+    background: #000;
+    box-shadow: 0 20px 55px rgba(79, 70, 229, 0.12);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.teacher-media {
+    position: relative;
+    min-height: 320px;
+}
+
+.teacher-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease, filter 0.5s ease, opacity 0.5s ease;
+    will-change: transform, filter, opacity;
+    display: block;
+}
+
+.teacher-name-pill {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    z-index: 2;
+}
+
+.teacher-name-pill .name {
+    display: inline-block;
+    padding: 0.4rem 0.75rem;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(2px);
+    color: #fff;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+    max-width: 70vw;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
+.teacher-overlay {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: end;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, 0.55) 100%);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.35s ease;
+    backdrop-filter: blur(1.5px);
+}
+
+.teacher-panel {
+    width: 100%;
+    padding: 1rem 1rem 1.1rem;
+    color: #fff;
+    transform: translateY(12px);
+    transition: transform 0.35s ease;
+}
+
+.teacher-panel .name {
+    margin: 0 0 0.25rem;
+    font-weight: 800;
+    font-size: 1.1rem;
+}
+
+.teacher-panel .meta {
+    margin: 0 0 0.5rem;
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.teacher-panel .meta .dot {
+    margin: 0 0.4rem;
+    opacity: 0.8;
+}
+
+.teacher-panel .bio {
+    margin: 0;
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.85);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.teacher-card:hover .teacher-img,
+.teacher-card:focus-visible .teacher-img,
+.teacher-card.is-active .teacher-img {
+    transform: scale(1.04);
+    filter: brightness(0.75) saturate(0.95);
+}
+
+.teacher-card:hover .teacher-overlay,
+.teacher-card:focus-visible .teacher-overlay,
+.teacher-card.is-active .teacher-overlay {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.teacher-card:hover .teacher-panel,
+.teacher-card:focus-visible .teacher-panel,
+.teacher-card.is-active .teacher-panel {
+    transform: translateY(0);
+}
+
+.teacher-card:hover .teacher-name-pill,
+.teacher-card:focus-visible .teacher-name-pill,
+.teacher-card.is-active .teacher-name-pill {
+    opacity: 0;
+    transform: translateY(8px);
+    transition: 0.25s ease;
+}
+
+/* Graduates Section */
+.graduates {
+    padding: 5rem 0;
+    background: var(--surface);
+}
+
+.graduate-card {
+    border-radius: 1.5rem;
+    overflow: hidden;
+    box-shadow: 0 24px 60px rgba(79, 70, 229, 0.12);
+    height: 100%;
+    display: block;
+    position: relative;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    cursor: pointer;
+}
+
+.graduate-media {
+    position: relative;
+    width: 100%;
+    height: clamp(220px, 28vw, 320px);
+    background: rgba(79, 70, 229, 0.12);
+}
+
+.graduate-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    transition: transform 0.45s cubic-bezier(0.2, 0.7, 0.2, 1), filter 0.35s ease;
+    display: block;
+}
+
+.graduate-name-pill {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 0.2px;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.graduate-name-pill .name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 70vw;
+    display: inline-block;
+}
+
+.graduate-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-end;
+    padding: 0;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.graduate-overlay::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0) 20%, rgba(0, 0, 0, 0.6) 100%);
+}
+
+.graduate-panel {
+    position: relative;
+    z-index: 1;
+    pointer-events: auto;
+    width: 100%;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    padding: clamp(14px, 2vw, 18px);
+    transform: translateY(100%);
+    transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.graduate-panel .name {
+    margin: 0 0 4px;
+    font-size: clamp(16px, 2.2vw, 20px);
+    font-weight: 900;
+}
+
+.graduate-panel .meta {
+    margin: 0 0 6px;
+    font-size: 0.96rem;
+    opacity: 0.95;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.graduate-panel .dot {
+    opacity: 0.8;
+}
+
+.graduate-panel .score {
+    font-weight: 700;
+    color: #c7d2fe;
+}
+
+.graduate-panel .quote {
+    margin: 0;
+    font-size: 0.96rem;
+    line-height: 1.5;
+}
+
+.graduate-card:hover,
+.graduate-card:focus-visible,
+.graduate-card.is-active {
+    transform: translateY(-6px);
+    box-shadow: 0 32px 85px rgba(79, 70, 229, 0.18);
+}
+
+.graduate-card:hover .graduate-img,
+.graduate-card:focus-visible .graduate-img,
+.graduate-card.is-active .graduate-img {
+    transform: scale(1.05);
+    filter: blur(2px) brightness(0.65) saturate(1.02);
+}
+
+.graduate-card:hover .graduate-overlay,
+.graduate-card:focus-visible .graduate-overlay,
+.graduate-card.is-active .graduate-overlay {
+    opacity: 1;
+    visibility: visible;
+}
+
+.graduate-card:hover .graduate-panel,
+.graduate-card:focus-visible .graduate-panel,
+.graduate-card.is-active .graduate-panel {
+    transform: translateY(0%);
+}
+
+.graduate-card:hover .graduate-name-pill,
+.graduate-card:focus-visible .graduate-name-pill,
+.graduate-card.is-active .graduate-name-pill {
+    opacity: 0;
+    transform: translateY(8px);
+}
+
+/* Carousel */
+.carousel-multi {
+    position: relative;
+    margin-bottom: 2rem;
+}
+
+.carousel-multi .carousel-item {
+    padding: 0.5rem 0;
+}
+
+.carousel-multi .carousel-control-prev,
+.carousel-multi .carousel-control-next {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: rgba(79, 70, 229, 0.85);
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0.9;
+}
+
+.carousel-multi .carousel-control-prev-icon,
+.carousel-multi .carousel-control-next-icon {
+    filter: invert(1);
+}
+
+.carousel-multi .carousel-control-prev:hover,
+.carousel-multi .carousel-control-next:hover {
+    opacity: 1;
+}
+
+.carousel-multi .carousel-control-prev:focus,
+.carousel-multi .carousel-control-next:focus {
+    box-shadow: none;
+}
+
+.carousel-multi .carousel-item .row {
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.carousel-multi .carousel-item .col-md-4,
+.carousel-multi .carousel-item .col-md-6,
+.carousel-multi .carousel-item .col-6,
+.carousel-multi .carousel-item .col-md-3 {
+    padding-bottom: 1rem;
+}
+
+/* Stats Section */
 .stats {
     padding: 4.5rem 0;
     background: linear-gradient(135deg, rgba(79, 70, 229, 0.95) 0%, rgba(108, 99, 255, 0.95) 100%);
@@ -268,6 +625,7 @@ body {
     font-weight: 500;
 }
 
+/* Courses Section */
 .courses {
     padding: 5rem 0;
 }
@@ -318,6 +676,7 @@ body {
     font-weight: 500;
 }
 
+/* Testimonials Section */
 .testimonials {
     padding: 5rem 0;
     background: var(--surface);
@@ -355,6 +714,7 @@ body {
     letter-spacing: 0.08em;
 }
 
+/* Advisory Section */
 .advisory {
     padding: 5rem 0;
 }
@@ -405,6 +765,7 @@ body {
     box-shadow: 0 25px 55px rgba(79, 70, 229, 0.32);
 }
 
+/* Footer */
 .site-footer {
     background: linear-gradient(135deg, rgba(49, 46, 129, 0.95) 0%, rgba(30, 27, 75, 0.96) 100%);
     color: #ffffff;
@@ -470,32 +831,7 @@ body {
     margin: 2.5rem 0;
 }
 
-.animate-on-scroll {
-    opacity: 0;
-    transform: translateY(35px);
-    transition: opacity 0.6s ease, transform 0.6s ease;
-}
-
-.animate-on-scroll.visible {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-.hero__cursor,
-.blinking-cursor {
-    animation: blink 1s steps(2, start) infinite;
-}
-
-@keyframes blink {
-    0%,
-    100% {
-        opacity: 0;
-    }
-    50% {
-        opacity: 1;
-    }
-}
-
+/* Responsive Styles */
 @media (max-width: 991.98px) {
     .site-nav {
         padding: 0.75rem 0;
@@ -527,5 +863,18 @@ body {
 
     .hero__title {
         font-size: 2.4rem;
+    }
+
+    .carousel-multi .carousel-control-prev,
+    .carousel-multi .carousel-control-next {
+        width: 36px;
+        height: 36px;
+    }
+}
+
+/* Touch/Mobile: toggle bằng JS */
+@media (hover: none) and (pointer: coarse) {
+    .graduate-card {
+        box-shadow: 0 18px 44px rgba(79, 70, 229, 0.14);
     }
 }
