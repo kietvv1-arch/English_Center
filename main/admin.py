@@ -58,9 +58,7 @@ class TeacherAdmin(admin.ModelAdmin):
         ),
         (
             "Ảnh đại diện",
-            {
-                "fields": ("avatar", "avatar_alt", "avatar_preview"),
-            },
+            {"fields": ("avatar", "avatar_alt", "avatar_preview")},
         ),
         (
             "Cá nhân & Liên hệ",
@@ -76,27 +74,22 @@ class TeacherAdmin(admin.ModelAdmin):
         ),
         (
             "Khác",
-            {
-                "classes": ("collapse",),
-                "fields": ("salary", "created_at", "updated_at"),
-            },
+            {"classes": ("collapse",), "fields": ("salary", "created_at", "updated_at")},
         ),
     )
 
+    @admin.display(description="Ảnh")
     def avatar_thumb(self, obj):
         return format_html(
             '<img src="{}" style="height:32px;width:32px;border-radius:50%;object-fit:cover;" />',
             obj.avatar_url,
         )
 
-    avatar_thumb.short_description = "Ảnh"
-
+    @admin.display(description="Xem trước")
     def avatar_preview(self, obj):
-        return format_html('<img src="{}" style="height:120px;border-radius:8px;" />', obj.avatar_url)
-
-    avatar_preview.short_description = "Xem trước"
-
-
+        return format_html(
+            '<img src="{}" style="height:120px;border-radius:8px;" />', obj.avatar_url
+        )
 
 
 @admin.register(HeroHighlight)
@@ -122,6 +115,7 @@ class NavigationLinkAdmin(admin.ModelAdmin):
     list_filter = ("location", "is_active")
     search_fields = ("label", "href")
 
+
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
     list_display = ("title", "level_display", "price", "is_active", "updated_at")
@@ -130,14 +124,22 @@ class CourseAdmin(admin.ModelAdmin):
     ordering = ("-created_at",)
     readonly_fields = ("created_at", "updated_at")
 
+    @admin.display(description="Trình độ")
     def level_display(self, obj):
         return obj.get_level_display()
 
-    level_display.short_description = "Trình độ"
 
 @admin.register(Achievement)
 class AchievementAdmin(admin.ModelAdmin):
-    list_display = ("title", "kind", "year", "metric_display", "order", "is_active", "updated_at")
+    list_display = (
+        "title",
+        "kind",
+        "year",
+        "metric_display",
+        "order",
+        "is_active",
+        "updated_at",
+    )
     list_filter = ("kind", "is_active")
     search_fields = ("title", "subtitle", "description")
     ordering = ("order", "id")

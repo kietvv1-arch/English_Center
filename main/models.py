@@ -435,57 +435,85 @@ class Reason(models.Model):
             return static(f"public/images/reason/{self.image}")
         return static("public/images/reason/placeholder.svg")
 
-class Achievement(models.Model):
-    """Thành tựu/giải thưởng/mốc phát triển của trung tâm (hiển thị ở Home)."""
 
-    TYPE_CHOICES = [
-        ("award", "Giải thưởng"),
-        ("milestone", "Cột mốc"),
-        ("press", "Báo chí/Truyền thông"),
-        ("certificate", "Chứng nhận"),
-        ("partnership", "Hợp tác"),
-        ("other", "Khác"),
-    ]
+class AchievementQuerySet(models.QuerySet):
+    def active(self):
+        return self.filter(is_active=True)
+
+    def published(self, *, at=None):
+        moment = at or timezone.now()
+        return self.filter(
+            models.Q(publish_at__isnull=True) | models.Q(publish_at__lte=moment),
+            models.Q(unpublish_at__isnull=True) | models.Q(unpublish_at__gt=moment),
+        )
+
+
+class AchievementType(models.TextChoices):
+    AWARD = "award", "Giải thưởng"
+    MILESTONE = "milestone", "Cột mốc"
+    PRESS = "press", "Báo chí/Truyền thông"
+    CERTIFICATE = "certificate", "Chứng nhận"
+    PARTNERSHIP = "partnership", "Hợp tác"
+    OTHER = "other", "Khác"
+
+
+class Achievement(models.Model):
+    """Thành tựu, giải thưởng hoặc cột mốc phát triển của trung tâm (hiển thị trên trang chủ)."""
 
     # Nội dung hiển thị
     title = models.CharField(max_length=180, verbose_name="Tiêu đề")
     subtitle = models.CharField(max_length=220, blank=True, verbose_name="Phụ đề/ngắn gọn")
     description = models.TextField(blank=True, verbose_name="Mô tả chi tiết")
-    kind = models.CharField(max_length=20, choices=TYPE_CHOICES, default="milestone", verbose_name="Loại")
-  
-    image = models.ImageField(
-        upload_to="achievements/", blank=True, null=True,
-        help_text="Ảnh minh họa (tùy chọn)."
+    kind = models.CharField(
+        max_length=20,
+        choices=AchievementType.choices,
+        default=AchievementType.MILESTONE,
+        verbose_name="Loại",
     )
-    image_alt = models.CharField(max_length=150, blank=True, help_text="Alt text cho ảnh (SEO/A11y).")
+    image = models.ImageField(
+        upload_to="achievements/",
+        blank=True,
+        null=True,
+        help_text="Ảnh minh họa tùy chọn.",
+    )
+    image_alt = models.CharField(
+        max_length=150,
+        blank=True,
+        help_text="Văn bản thay thế cho ảnh (SEO/A11y).",
+    )
 
-    # Thông tin phụ: năm/mốc, số liệu (nếu muốn show kèm con số)
+    # Thông tin phụ trợ (năm đạt được, số liệu thống kê...)
     year = models.PositiveIntegerField(
-        null=True, blank=True,
+        null=True,
+        blank=True,
         validators=[MinValueValidator(1900), MaxValueValidator(3000)],
-        help_text="Năm đạt thành tựu (tùy chọn)."
+        help_text="Năm đạt thành tựu (tùy chọn).",
     )
     metric_value = models.PositiveBigIntegerField(
-        null=True, blank=True,
-        help_text="Giá trị số (vd: 1000). Bỏ trống nếu không dùng."
+        null=True,
+        blank=True,
+        help_text="Giá trị số (ví dụ: 1000). Để trống nếu không dùng.",
     )
     metric_suffix = models.CharField(
-        max_length=10, blank=True,
-        help_text="Hậu tố hiển thị (vd: '+', 'k', '%')."
+        max_length=10,
+        blank=True,
+        help_text="Hậu tố hiển thị (ví dụ: '+', 'k', '%').",
     )
 
-    # Link tham khảo (bài báo, chứng nhận…)
+    # Liên kết tham khảo (bài báo, chứng nhận...)
     external_url = models.URLField(blank=True, verbose_name="Liên kết ngoài")
 
     # Điều khiển hiển thị
-    order = models.PositiveIntegerField(default=0, help_text="Thứ tự hiển thị ở Home")
+    order = models.PositiveIntegerField(default=0, help_text="Thứ tự hiển thị trên trang chủ.")
     is_active = models.BooleanField(default=True, verbose_name="Đang hoạt động")
     publish_at = models.DateTimeField(null=True, blank=True, verbose_name="Thời điểm đăng")
     unpublish_at = models.DateTimeField(null=True, blank=True, verbose_name="Thời điểm gỡ")
 
-    # Tự động
+    # Tự động ghi nhận thời gian
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    objects = AchievementQuerySet.as_manager()
 
     class Meta:
         verbose_name = "Thành tựu"
@@ -497,7 +525,6 @@ class Achievement(models.Model):
             models.Index(fields=["kind"]),
         ]
         constraints = [
-            # Tránh trùng tiêu đề khi đang bật (không phân biệt hoa/thường)
             models.UniqueConstraint(
                 Lower("title"),
                 condition=models.Q(is_active=True),
@@ -506,15 +533,22 @@ class Achievement(models.Model):
         ]
 
     def __str__(self) -> str:
-        if self.year:
-            return f"{self.title} ({self.year})"
-        return self.title
+        return f"{self.title} ({self.year})" if self.year else self.title
+
+    @property
+    def has_metric(self) -> bool:
+        return self.metric_value is not None
+
+    @property
+    def metric_display(self) -> str:
+        if self.metric_value is None:
+            return ""
+        return f"{self.metric_value}{self.metric_suffix or ''}"
 
     @property
     def image_url(self) -> str:
         if self.image and getattr(self.image, "url", None):
             return self.image.url
-        # Fallback placeholder nếu không dùng image
         return static("public/images/achievement/placeholder.svg")
 
     @property
@@ -528,18 +562,10 @@ class Achievement(models.Model):
             return False
         return True
 
-    @property
-    def metric_display(self) -> str:
-        """Chuỗi hiển thị nhanh cho số liệu (nếu có)."""
-        if self.metric_value is None:
-            return ""
-        return f"{self.metric_value}{self.metric_suffix or ''}"
-
     def clean(self):
         super().clean()
         if self.publish_at and self.unpublish_at and self.publish_at >= self.unpublish_at:
-            from django.core.exceptions import ValidationError
-            raise ValidationError({"unpublish_at": "Thời gian gỡ phải sau thời gian đăng."}) 
+            raise ValidationError({"unpublish_at": "Thời điểm gỡ phải sau thời điểm đăng."})
 
 
 class OutstandingGraduate(models.Model):

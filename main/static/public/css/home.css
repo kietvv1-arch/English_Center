@@ -402,32 +402,6 @@ body {
   padding-bottom: 1rem;
 }
 
-.stats {
-  padding: 4.5rem 0;
-  background: linear-gradient(135deg, rgba(79, 70, 229, 0.95) 0%, rgba(108, 99, 255, 0.95) 100%);
-  color: #ffffff;
-}
-
-.stat-card {
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 1.25rem;
-  padding: 2.5rem 1.5rem;
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-}
-
-.stat-card__value {
-  font-size: clamp(2.4rem, 5vw, 3rem);
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-}
-
-.stat-card__label {
-  color: rgba(226, 232, 240, 0.85);
-  margin: 0;
-  font-weight: 500;
-}
-
 .courses {
   padding: 5rem 0;
 }

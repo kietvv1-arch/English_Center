@@ -141,6 +141,63 @@
         </div>
       </section>
 
+      <section class="courses" id="courses">
+        <div class="container">
+          <div class="text-center mb-5">
+            <h2 class="section-title">Chương trình nổi bật</h2>
+            <p class="section-subtitle">Lựa chọn khóa học phù hợp với mục tiêu và trình độ của bạn.</p>
+          </div>
+
+          <div id="coursesCarousel" class="carousel slide carousel-multi" data-bs-ride="carousel" data-bs-interval="5000">
+            <div class="carousel-inner">
+              {% if courses %}
+                {% for course in courses %}
+                  {% if forloop.first or forloop.counter0|divisibleby:3 %}
+                  <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                    <div class="row g-4">
+                  {% endif %}
+                      <div class="col-md-4">
+                        <article class="course-card animate-on-scroll">
+                          <div class="course-card__visual"><i class="{{ course.icon }}"></i></div>
+                          <div class="course-card__body">
+                            <h3 class="course-card__title">{{ course.title }}</h3>
+                            <p class="course-card__description">{{ course.description }}</p>
+                            <div class="course-card__meta">
+                              <span><i class="far fa-clock me-1"></i> {{ course.duration }}</span>
+                              <span><i class="fas fa-user-friends me-1"></i> {{ course.level }}</span>
+                            </div>
+                          </div>
+                        </article>
+                      </div>
+                  {% if forloop.counter|divisibleby:3 or forloop.last %}
+                    </div>
+                  </div>
+                  {% endif %}
+                {% endfor %}
+              {% else %}
+                <div class="carousel-item active">
+                  <div class="row justify-content-center">
+                    <div class="col-md-8 text-center text-muted py-4">Chương trình đang được cập nhật.</div>
+                  </div>
+                </div>
+              {% endif %}
+            </div>
+            {% if courses|length > 3 %}
+              <button class="carousel-control-prev" type="button" data-bs-target="#coursesCarousel" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Trước</span>
+              </button>
+              <button class="carousel-control-next" type="button" data-bs-target="#coursesCarousel" data-bs-slide="next">
+                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Sau</span>
+              </button>
+            {% endif %}
+          </div>
+        </div>
+      </section>
+
+      
+
       <!-- TEACHERS (giữ nguyên) -->
       <section class="teachers" id="teachers">
         <div class="container">
@@ -214,148 +271,69 @@
         </section>
 
 
-      <!-- STATS & COURSES (giữ nguyên cấu trúc) -->
-      <section class="stats" id="stats">
-        <div class="container">
-          <div id="statsCarousel" class="carousel slide carousel-multi" data-bs-ride="carousel" data-bs-interval="5000">
-            <div class="carousel-inner">
-              {% if stats %}
-                {% for stat in stats %}
-                  {% if forloop.first or forloop.counter0|divisibleby:4 %}
-                  <div class="carousel-item {% if forloop.first %}active{% endif %}">
-                    <div class="row gy-4">
-                  {% endif %}
-                      <div class="col-6 col-md-3">
-                        <article class="stat-card text-center">
-                          <h3 class="stat-card__value"
-                              x-data="{ count: 0, target: {{ stat.value }}, step: {{ stat.step }} }"
-                              x-init="setTimeout(() => { const i = setInterval(() => { if ($data.count < $data.target) { $data.count = Math.min($data.target, $data.count + $data.step); } else { clearInterval(i); } }, 20); }, {{ stat.delay }})"
-                              x-text="Number($data.count).toLocaleString('vi-VN') + '{{ stat.suffix }}'"></h3>
-                          <p class="stat-card__label">{{ stat.label }}</p>
-                        </article>
-                      </div>
-                  {% if forloop.counter|divisibleby:4 or forloop.last %}
-                    </div>
-                  </div>
-                  {% endif %}
-                {% endfor %}
-              {% else %}
-                <div class="carousel-item active">
-                  <div class="row justify-content-center">
-                    <div class="col-md-6 text-center text-muted py-4">Thống kê đang được cập nhật.</div>
-                  </div>
-                </div>
-              {% endif %}
-            </div>
-            {% if stats|length > 4 %}
-              <button class="carousel-control-prev" type="button" data-bs-target="#statsCarousel" data-bs-slide="prev">
-                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                <span class="visually-hidden">Trước</span>
-              </button>
-              <button class="carousel-control-next" type="button" data-bs-target="#statsCarousel" data-bs-slide="next">
-                <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                <span class="visually-hidden">Sau</span>
-              </button>
-            {% endif %}
-          </div>
-        </div>
-      </section>
-
-      <section class="courses" id="courses">
-        <div class="container">
-          <div class="text-center mb-5">
-            <h2 class="section-title">Chương trình nổi bật</h2>
-            <p class="section-subtitle">Lựa chọn khóa học phù hợp với mục tiêu và trình độ của bạn.</p>
-          </div>
-
-          <div id="coursesCarousel" class="carousel slide carousel-multi" data-bs-ride="carousel" data-bs-interval="5000">
-            <div class="carousel-inner">
-              {% if courses %}
-                {% for course in courses %}
-                  {% if forloop.first or forloop.counter0|divisibleby:3 %}
-                  <div class="carousel-item {% if forloop.first %}active{% endif %}">
-                    <div class="row g-4">
-                  {% endif %}
-                      <div class="col-md-4">
-                        <article class="course-card animate-on-scroll">
-                          <div class="course-card__visual"><i class="{{ course.icon }}"></i></div>
-                          <div class="course-card__body">
-                            <h3 class="course-card__title">{{ course.title }}</h3>
-                            <p class="course-card__description">{{ course.description }}</p>
-                            <div class="course-card__meta">
-                              <span><i class="far fa-clock me-1"></i> {{ course.duration }}</span>
-                              <span><i class="fas fa-user-friends me-1"></i> {{ course.level }}</span>
-                            </div>
-                          </div>
-                        </article>
-                      </div>
-                  {% if forloop.counter|divisibleby:3 or forloop.last %}
-                    </div>
-                  </div>
-                  {% endif %}
-                {% endfor %}
-              {% else %}
-                <div class="carousel-item active">
-                  <div class="row justify-content-center">
-                    <div class="col-md-8 text-center text-muted py-4">Chương trình đang được cập nhật.</div>
-                  </div>
-                </div>
-              {% endif %}
-            </div>
-            {% if courses|length > 3 %}
-              <button class="carousel-control-prev" type="button" data-bs-target="#coursesCarousel" data-bs-slide="prev">
-                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                <span class="visually-hidden">Trước</span>
-              </button>
-              <button class="carousel-control-next" type="button" data-bs-target="#coursesCarousel" data-bs-slide="next">
-                <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                <span class="visually-hidden">Sau</span>
-              </button>
-            {% endif %}
-          </div>
-        </div>
-      </section>
-
-      <!-- ======= GRADUATES (ĐÃ SỬA THEO YÊU CẦU) ======= -->
+      
+      <!-- ======= GRADUATES ======= -->
       <section class="graduates" id="graduates">
         <div class="container">
           <div class="text-center mb-5">
             <h2 class="section-title">Học viên tốt nghiệp xuất sắc</h2>
           </div>
-          <div class="row g-4">
-            {% if graduates %}
+          {% if graduates %}
+          <div id="graduatesCarousel" class="carousel slide carousel-multi" data-bs-ride="carousel" data-bs-interval="5000">
+            <div class="carousel-inner">
               {% for graduate in graduates %}
-              <div class="col-sm-6 col-lg-4">
-                <article class="graduate-card animate-on-scroll" tabindex="0" aria-label="Học viên {{ graduate.name }}">
-                  <div class="graduate-media">
-                    <img src="{{ graduate.photo_url }}" alt="{{ graduate.name }}" class="graduate-img" loading="lazy" />
-                    <!-- Tên luôn hiển thị khi chưa hover -->
-                    <div class="graduate-name-pill"><span class="name">{{ graduate.name }}</span></div>
-                    <!-- Overlay + Panel trượt lên khi hover/tap -->
-                    <div class="graduate-overlay" aria-hidden="true">
-                      <div class="graduate-panel">
-                        <h3 class="name">{{ graduate.name }}</h3>
-                        <p class="meta">
-                          <span class="course">{{ graduate.course }}</span>
-                          {% if graduate.score %}<span class="dot">•</span><span class="score">{{ graduate.score }}</span>{% endif %}
-                        </p>
-                        {% if graduate.testimonial %}
-                        <p class="quote">“{{ graduate.testimonial }}”</p>
-                        {% endif %}
-                      </div>
+                {% if forloop.first or forloop.counter0|divisibleby:3 %}
+                <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                  <div class="row g-4">
+                {% endif %}
+                    <div class="col-sm-6 col-lg-4">
+                      <article class="graduate-card animate-on-scroll" tabindex="0" aria-label="Học viên {{ graduate.name }}">
+                        <div class="graduate-media">
+                          <img src="{{ graduate.photo_url }}" alt="{{ graduate.name }}" class="graduate-img" loading="lazy" />
+                          <div class="graduate-name-pill"><span class="name">{{ graduate.name }}</span></div>
+                          <div class="graduate-overlay" aria-hidden="true">
+                            <div class="graduate-panel">
+                              <h3 class="name">{{ graduate.name }}</h3>
+                              <p class="meta">
+                                <span class="course">{{ graduate.course }}</span>
+                                {% if graduate.score %}<span class="dot">&bull;</span><span class="score">{{ graduate.score }}</span>{% endif %}
+                              </p>
+                              {% if graduate.testimonial %}
+                              <p class="quote">&ldquo;{{ graduate.testimonial }}&rdquo;</p>
+                              {% endif %}
+                            </div>
+                          </div>
+                        </div>
+                      </article>
                     </div>
+                {% if forloop.counter|divisibleby:3 or forloop.last %}
                   </div>
-                </article>
-              </div>
+                </div>
+                {% endif %}
               {% endfor %}
-            {% else %}
-              <div class="col-12 text-center text-muted">Danh sách học viên xuất sắc đang được cập nhật.</div>
+            </div>
+            {% if graduates|length > 3 %}
+            <button class="carousel-control-prev" type="button" data-bs-target="#graduatesCarousel" data-bs-slide="prev">
+              <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+              <span class="visually-hidden">Trước</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#graduatesCarousel" data-bs-slide="next">
+              <span class="carousel-control-next-icon" aria-hidden="true"></span>
+              <span class="visually-hidden">Sau</span>
+            </button>
             {% endif %}
           </div>
+          {% else %}
+          <div class="row g-4 justify-content-center">
+            <div class="col-md-6 text-center text-muted py-4">Danh sách học viên xuất sắc đang được cập nhật.</div>
+          </div>
+          {% endif %}
         </div>
       </section>
 
-      <!-- TESTIMONIALS + ADVISORY (giữ nguyên) -->
+      
+
+<!-- TESTIMONIALS + ADVISORY (giữ nguyên) -->
       <section class="testimonials" id="testimonials">
         <div class="container">
           <div class="text-center mb-5">
@@ -407,6 +385,65 @@
               </button>
             {% endif %}
           </div>
+        </div>
+      </section>
+
+      
+      <section class="achievements" id="achievements">
+        <div class="container">
+          <div class="text-center mb-5">
+            <h2 class="section-title">Thành tựu nổi bật</h2>
+            <p class="section-subtitle">
+              Những cột mốc, giải thưởng và hợp tác tiêu biểu minh chứng cho chất lượng đào tạo tại Global English.
+            </p>
+          </div>
+          {% if achievements %}
+          <div id="achievementsCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="6000">
+            <div class="carousel-inner">
+              {% for achievement in achievements %}
+              <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                <article class="achievement-hero-card">
+                  <div class="achievement-hero-card__media">
+                    <img src="{{ achievement.image_url }}" alt="{{ achievement.image_alt|default:achievement.title }}" loading="lazy" />
+                    {% if achievement.year %}<span class="achievement-hero-card__badge">{{ achievement.year }}</span>{% endif %}
+                  </div>
+                  <div class="achievement-hero-card__body">
+                    <span class="achievement-hero-card__kind">{{ achievement.kind }}</span>
+                    <h3 class="achievement-hero-card__title">{{ achievement.title }}</h3>
+                    {% if achievement.subtitle %}<p class="achievement-hero-card__subtitle">{{ achievement.subtitle }}</p>{% endif %}
+                    {% if achievement.description %}<p class="achievement-hero-card__description">{{ achievement.description }}</p>{% endif %}
+                    {% if achievement.has_metric %}
+                    <div class="achievement-hero-card__metric">
+                      <span class="achievement-hero-card__metric-value">{{ achievement.metric_display }}</span>
+                      <span class="achievement-hero-card__metric-label">Chỉ số nổi bật</span>
+                    </div>
+                    {% endif %}
+                    {% if achievement.external_url %}
+                    <a class="achievement-hero-card__link" href="{{ achievement.external_url }}" target="_blank" rel="noopener">
+                      Tìm hiểu thêm <i class="fas fa-arrow-right ms-2"></i>
+                    </a>
+                    {% endif %}
+                  </div>
+                </article>
+              </div>
+              {% endfor %}
+            </div>
+            {% if achievements|length > 1 %}
+            <button class="carousel-control-prev" type="button" data-bs-target="#achievementsCarousel" data-bs-slide="prev">
+              <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+              <span class="visually-hidden">Trước</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#achievementsCarousel" data-bs-slide="next">
+              <span class="carousel-control-next-icon" aria-hidden="true"></span>
+              <span class="visually-hidden">Sau</span>
+            </button>
+            {% endif %}
+          </div>
+          {% else %}
+          <div class="row g-4 justify-content-center">
+            <div class="col-md-6 text-center text-muted py-4">Danh sách thành tựu đang được cập nhật.</div>
+          </div>
+          {% endif %}
         </div>
       </section>
 
