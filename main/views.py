@@ -2,7 +2,22 @@ from datetime import date
 from typing import Iterable, List, Sequence
 
 from django.db.models import Q, QuerySet
+from django.conf import settings
 from django.contrib.auth import authenticate, login as auth_login
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import redirect, render
+from django.templatetags.static import static
+from django.utils import timezone
+from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
+
+from datetime import date
+from typing import Iterable, List, Sequence
+
+from django.db.models import Q, QuerySet
+from django.conf import settings
+from django.contrib.auth import authenticate, login as auth_login
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 from django.templatetags.static import static
 from django.utils import timezone
@@ -21,7 +36,76 @@ from .models import (
     Teacher,
 )
 
+# ================= Login =================#
 
+def login(request):
+    """Xử lý đăng nhập người dùng cho trang công khai.
+
+    - Chuyển hướng nhân viên/superuser đến trang admin khi đã xác thực.
+    - Hỗ trợ tham số `next` an toàn bằng url_has_allowed_host_and_scheme.
+    - Nếu không chọn "remember", phiên làm việc sẽ hết hạn khi đóng trình duyệt.
+
+    Đầu vào:
+        request: Django HttpRequest
+    Đầu ra:
+        HttpResponse chuyển hướng đến trang thích hợp hoặc hiển thị giao diện đăng nhập.
+    """
+    # If user already logged in, send them to appropriate page
+    if request.user.is_authenticated:
+        if request.user.is_staff or request.user.is_superuser:
+            return redirect("admin:index")
+        return redirect("main:home")
+
+    error_message = None
+    username_value = ""
+    remember_checked = False
+
+    # `next` may come from either POST or GET
+    next_url = request.POST.get("next") or request.GET.get("next") or ""
+    # Ensure the `next` target is safe
+    if next_url and not url_has_allowed_host_and_scheme(
+        next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        next_url = ""
+
+    if request.method == "POST":
+        username_value = (request.POST.get("username") or "").strip()
+        password = request.POST.get("password") or ""
+        remember_checked = request.POST.get("remember") == "on"
+
+        user = authenticate(request, username=username_value, password=password)
+        if user is not None:
+            auth_login(request, user)
+            # If user didn't choose remember, expire session on browser close
+            if not remember_checked:
+                request.session.set_expiry(0)
+
+            admin_index = reverse("admin:index")
+            if user.is_staff or user.is_superuser:
+                return redirect(admin_index)
+
+            # Redirect to safe `next` or homepage
+            if next_url and url_has_allowed_host_and_scheme(
+                next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+            ):
+                return redirect(next_url)
+            return redirect("main:home")
+
+        # Provide a friendly message in Vietnamese
+        error_message = "Tên đăng nhập hoặc mật khẩu không đúng. Vui lòng thử lại."
+
+    context = {
+        "error": error_message,
+        "username_value": username_value,
+        "next": next_url,
+        "remember_checked": remember_checked,
+    }
+    return render(request, "public/login.html", context)
+
+
+#================= Home =================#
+
+# Cài đặt mặc định cho phần hero khi không có HomeSetting nào đang hoạt động
 DEFAULT_HERO_SETTING = {
     "eyebrow": "Global English",
     "typed_text": "Mở ra thế giới với tiếng Anh",
@@ -35,6 +119,7 @@ DEFAULT_HERO_SETTING = {
     "secondary_cta_href": "#intro-video",
 }
 
+# Thẻ dự phòng cho điểm nổi bật hero khi không có trong CSDL
 DEFAULT_HERO_HIGHLIGHTS = [
     {
         "icon": "fas fa-graduation-cap",
@@ -59,6 +144,7 @@ DEFAULT_HERO_HIGHLIGHTS = [
     },
 ]
 
+# Liên kết điều hướng và footer mặc định dùng làm dự phòng
 DEFAULT_NAV_LINKS = [
     {"label": "Giới thiệu", "href": "#features"},
     {"label": "Khóa học", "href": "#courses"},
@@ -82,7 +168,14 @@ DEFAULT_FOOTER_ABOUT = [
     {"label": "Cơ sở vật chất", "href": "#features"},
 ]
 
+
+#================= Helper Functions =================#
+
 def _calculate_experience_years(start_date):
+    """Tính số năm kinh nghiệm đầy đủ kể từ `start_date`.
+
+    Trả về None khi start_date không hợp lệ. Đảm bảo kết quả không âm.
+    """
     if not start_date:
         return None
     today = date.today()
@@ -93,10 +186,18 @@ def _calculate_experience_years(start_date):
 
 
 def _get_active_reasons() -> QuerySet[Reason]:
+    """Trả về danh sách `Reason` đang hoạt động, sắp xếp theo `order` rồi đến `id`.
+
+    Đây là các thẻ lý do/tính năng nhỏ được hiển thị trên trang chủ.
+    """
     return Reason.objects.filter(is_active=True).order_by("order", "id")
 
 
 def _get_hero_setting() -> dict:
+    """Xây dựng dữ liệu phần hero từ HomeSetting đang hoạt động hoặc sử dụng giá trị mặc định.
+
+    Kết hợp các giá trị đã lưu (nếu có) vào DEFAULT_HERO_SETTING.
+    """
     hero_setting = DEFAULT_HERO_SETTING.copy()
     hero_obj = (
         HomeSetting.objects.filter(is_active=True).order_by("order", "id").first()
@@ -117,12 +218,17 @@ def _get_hero_setting() -> dict:
         if value:
             hero_setting[key] = value
 
+    # Ensure href is safe even when secondary label absent
     if not hero_setting["secondary_cta_label"]:
         hero_setting["secondary_cta_href"] = "#"
     return hero_setting
 
 
 def _serialize_highlights(cards: Sequence[HeroHighlight]) -> List[dict]:
+    """Chuyển đổi danh sách HeroHighlight thành list các dict cho template.
+
+    Trả về highlights mặc định khi danh sách trống.
+    """
     highlights = [
         {"icon": card.icon, "title": card.title, "description": card.description}
         for card in cards
@@ -131,6 +237,11 @@ def _serialize_highlights(cards: Sequence[HeroHighlight]) -> List[dict]:
 
 
 def _build_nav_links(*, location: str, default: Sequence[dict]) -> List[dict]:
+    """Trả về các NavigationLink đang hoạt động cho vị trí được chỉ định.
+
+    `location` phải khớp với các giá trị được định nghĩa trong model NavigationLink.
+    Sử dụng `default` khi không có liên kết nào được cấu hình trong DB.
+    """
     links = NavigationLink.objects.filter(
         location=location, is_active=True
     ).order_by("order", "id")
@@ -139,17 +250,27 @@ def _build_nav_links(*, location: str, default: Sequence[dict]) -> List[dict]:
 
 
 def _get_teacher_queryset() -> QuerySet[Teacher]:
+    """Trả về danh sách giáo viên để hiển thị công khai.
+
+    Sử dụng phương thức `featured()` nếu có; nếu không sẽ trả về 
+    giáo viên có trạng thái "Active".
+    """
     queryset = Teacher.objects.filter(status="Active").order_by("order", "id")
     featured = getattr(Teacher.objects, "featured", None)
     if callable(featured):
         try:
             queryset = featured().order_by("order", "id")
         except Exception:
+            # If featured() fails for any reason, silently fall back to default
             pass
     return queryset
 
 
 def _serialize_teachers(teachers_qs: Iterable[Teacher]) -> List[dict]:
+    """Chuyển đổi đối tượng giáo viên thành dict đơn giản cho frontend.
+
+    Mỗi giáo viên sau chuyển đổi gồm: name, role, bio, experience_years, avatar_url
+    """
     serialized = []
     for teacher in teachers_qs:
         serialized.append(
@@ -167,6 +288,10 @@ def _serialize_teachers(teachers_qs: Iterable[Teacher]) -> List[dict]:
 def _serialize_achievements(
     achievements: Iterable[Achievement],
 ) -> List[dict]:
+    """Chuyển đổi thành tích thành các thẻ để hiển thị trên trang chủ hoặc admin.
+
+    Giữ nguyên các helper hiển thị (ví dụ: get_kind_display) và các trường hình ảnh/số liệu.
+    """
     cards: List[dict] = []
     for achievement in achievements:
         cards.append(
@@ -183,10 +308,14 @@ def _serialize_achievements(
                 "external_url": achievement.external_url,
             }
         )
-    return cards 
+    return cards
 
 
 def _serialize_courses(courses_qs: Iterable[Course]) -> List[dict]:
+    """Chuyển đổi danh sách khóa học thành dict đơn giản.
+
+    Ánh xạ `level` thành nhãn có thể đọc được bằng Course.LEVEL_CHOICES nếu có.
+    """
     level_map = dict(getattr(Course, "LEVEL_CHOICES", []))
     return [
         {
@@ -201,6 +330,10 @@ def _serialize_courses(courses_qs: Iterable[Course]) -> List[dict]:
 def _serialize_graduates(
     graduates_qs: Iterable[OutstandingGraduate],
 ) -> List[dict]:
+    """Chuyển đổi thông tin học viên xuất sắc để hiển thị trên trang chủ.
+
+    Sử dụng ảnh placeholder khi không có ảnh được lưu trữ.
+    """
     serialized = []
     for graduate in graduates_qs:
         serialized.append(
@@ -217,6 +350,10 @@ def _serialize_graduates(
 
 
 def _serialize_testimonials(stories_qs: Iterable[SuccessStory]) -> List[dict]:
+    """Tạo tóm tắt ngắn cho mỗi câu chuyện thành công đã được duyệt.
+
+    Tạo chữ cái đầu (2 chữ) và cắt ngắn trích dẫn xuống 160 ký tự.
+    """
     testimonials = []
     for story in stories_qs:
         initials = "".join(
@@ -234,6 +371,11 @@ def _serialize_testimonials(stories_qs: Iterable[SuccessStory]) -> List[dict]:
 
 
 def home(request):
+    """Hiển thị trang chủ công khai với tất cả dữ liệu context cần thiết.
+
+    Thu thập điểm nổi bật hero, giáo viên, khóa học, học viên tốt nghiệp, 
+    đánh giá và thành tựu.
+    """
     now = timezone.now()
 
     hero_highlights_qs = HeroHighlight.objects.filter(is_active=True).order_by(
@@ -293,48 +435,115 @@ def home(request):
     return render(request, "public/home.html", context)
 
 
-def login(request):
-    if request.user.is_authenticated:
-        if request.user.is_staff or request.user.is_superuser:
-            return redirect("admin:index")
-        return redirect("main:home")
+#================= Admin Dashboard =================#
 
-    error_message = None
-    username_value = ""
-    remember_checked = False
-    next_url = request.POST.get("next") or request.GET.get("next") or ""
-    if next_url and not url_has_allowed_host_and_scheme(
-        next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
-    ):
-        next_url = ""
 
-    if request.method == "POST":
-        username_value = (request.POST.get("username") or "").strip()
-        password = request.POST.get("password") or ""
-        remember_checked = request.POST.get("remember") == "on"
+def _normalize_service_status(value):
+    """Chuẩn hóa các biểu diễn trạng thái dịch vụ thành 'up', 'down', hoặc 'unknown'.
 
-        user = authenticate(request, username=username_value, password=password)
-        if user is not None:
-            auth_login(request, user)
-            if not remember_checked:
-                request.session.set_expiry(0)
+    Chấp nhận boolean, chuỗi hoặc None.
+    """
+    if value is None:
+        return "unknown"
+    normalized = str(value).strip().lower()
+    if normalized in {"up", "ok", "running", "ready", "healthy", "online"}:
+        return "up"
+    if normalized in {"down", "error", "failed", "offline", "unhealthy"}:
+        return "down"
+    return "unknown"
 
-            admin_index = reverse("admin:index")
-            if user.is_staff or user.is_superuser:
-                return redirect(admin_index)
 
-            if next_url and url_has_allowed_host_and_scheme(
-                next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
-            ):
-                return redirect(next_url)
-            return redirect("main:home")
+def _get_admin_footer_context():
+    """Thu thập các metadata nhỏ hiển thị trong footer admin (phiên bản, trạng thái dịch vụ, dung lượng).
 
-        error_message = "Tên đăng nhập hoặc mật khẩu không đúng. Vui lòng thử lại."
+    Đọc từ settings với các giá trị dự phòng hợp lý.
+    """
+    version = getattr(settings, "APP_VERSION", getattr(settings, "VERSION", "v1.0.0"))
+    environment = getattr(settings, "APP_ENVIRONMENT", getattr(settings, "ENVIRONMENT", "PROD")) or "PROD"
+    brand_name = getattr(settings, "SITE_BRAND_NAME", "Global English")
+    build_commit = getattr(settings, "BUILD_COMMIT", getattr(settings, "GIT_COMMIT", "abc1234"))
+    build_timestamp = getattr(settings, "BUILD_TIMESTAMP", None)
+    service_status = getattr(settings, "ADMIN_SERVICE_STATUS", {})
+
+    celery_status = _normalize_service_status(service_status.get("celery"))
+    redis_status = _normalize_service_status(service_status.get("redis"))
+    smtp_status = _normalize_service_status(service_status.get("smtp"))
+
+    if build_timestamp is None:
+        formatted_timestamp = timezone.now().strftime("%d/%m/%Y %H:%M")
+    elif hasattr(build_timestamp, "strftime"):
+        formatted_timestamp = build_timestamp.strftime("%d/%m/%Y %H:%M")
+    else:
+        formatted_timestamp = str(build_timestamp)
+
+    storage_db_usage = getattr(settings, "ADMIN_STORAGE_DB_USAGE", None) or "--"
+    storage_media_usage = getattr(settings, "ADMIN_STORAGE_MEDIA_USAGE", None) or "--"
+
+    return {
+        "brand_name": brand_name,
+        "app_version": version,
+        "app_environment": str(environment).upper(),
+        "build_commit": str(build_commit)[:7],
+        "build_timestamp": formatted_timestamp,
+        "celery_status": celery_status,
+        "redis_status": redis_status,
+        "smtp_status": smtp_status,
+        "storage_db_usage": storage_db_usage,
+        "storage_media_usage": storage_media_usage,
+    }
+
+
+@login_required
+def admin_dashboard(request):
+    footer_context = _get_admin_footer_context()
+
+    tasks_pending = [
+        {
+            "title": "Duyệt đơn đăng ký #ENR-1045",
+            "subtitle": "Enrollment • chờ duyệt",
+            "href": "#",
+        },
+        {
+            "title": "Xử lý hoàn tiền #REF-232",
+            "subtitle": "Finance • cần xác nhận",
+            "href": "#",
+        },
+        {
+            "title": "Phản hồi ticket #TCK-481",
+            "subtitle": "Support • SLA 4 giờ",
+            "href": "#",
+        },
+    ]
 
     context = {
-        "error": error_message,
-        "username_value": username_value,
-        "next": next_url,
-        "remember_checked": remember_checked,
+        "support_unread_count": 2,
+        "notification_unread_count": 4,
+        "tasks_pending": tasks_pending,
+        "tasks_pending_count": len(tasks_pending),
     }
-    return render(request, "public/login.html", context)
+    context.update(footer_context)
+    return render(request, "admin/dashboard.html", context)
+
+
+# ================= Additional Public Views =================#
+
+def about(request):
+    """Trang "Giới thiệu" đơn giản cho trang công khai.
+
+    Thu thập một bộ nội dung ngắn gọn: hero, liên kết điều hướng và lý do đang hoạt động.
+    Được thiết kế đơn giản có chủ đích — trang chủ vẫn là nguồn chính của nội dung động.
+    """
+    context = {
+        "nav_links": _build_nav_links(
+            location=NavigationLink.LOCATION_HEADER, default=DEFAULT_NAV_LINKS
+        ),
+        "hero_setting": _get_hero_setting(),
+        "reasons": _get_active_reasons(),
+        "footer_about": _build_nav_links(
+            location=NavigationLink.LOCATION_FOOTER_ABOUT,
+            default=DEFAULT_FOOTER_ABOUT,
+        ),
+    }
+    return render(request, "public/about.html", context)
+
+

@@ -1,0 +1,66 @@
+﻿{% extends "admin/base.html" %}
+
+{% block title %}Bảng điều khiển - Global English{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-xl-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h5 class="card-title mb-1">Tổng quan trung tâm</h5>
+                        <p class="text-muted mb-0">Theo dõi nhanh chỉ số hoạt động và các công việc cần xử lý.</p>
+                    </div>
+                    <span class="badge text-bg-primary">Beta</span>
+                </div>
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <div class="metric-card">
+                            <div class="metric-card__icon text-bg-primary-subtle text-primary">
+                                <i class="fas fa-user-graduate"></i>
+                            </div>
+                            <div class="metric-card__body">
+                                <p class="metric-card__label">Học viên đang theo học</p>
+                                <p class="metric-card__value">1.248</p>
+                                <p class="metric-card__helper text-success">+12% so với tuần trước</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="metric-card">
+                            <div class="metric-card__icon text-bg-success-subtle text-success">
+                                <i class="fas fa-receipt"></i>
+                            </div>
+                            <div class="metric-card__body">
+                                <p class="metric-card__label">Doanh thu tháng</p>
+                                <p class="metric-card__value">2.45 tỷ ₫</p>
+                                <p class="metric-card__helper text-muted">Đã thu 82% kế hoạch</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <h6 class="fw-semibold mb-3">Nhiệm vụ nổi bật</h6>
+                {% if tasks_pending %}
+                    <div class="list-group list-group-flush">
+                        {% for task in tasks_pending %}
+                        <a class="list-group-item list-group-item-action d-flex flex-column gap-1 py-3" href="{{ task.href }}">
+                            <span class="fw-semibold">{{ task.title }}</span>
+                            <small class="text-muted">{{ task.subtitle }}</small>
+                        </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted mb-0">Không có nhiệm vụ nào cần xử lý.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
