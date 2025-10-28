@@ -1,0 +1,50 @@
+<section class="features" id="features">
+  <div class="container">
+    <div class="text-center mb-5">
+      <h2 class="section-title">Vì sao học viên chọn Global English?</h2>
+      <p class="section-subtitle">Kết hợp phương pháp đào tạo chuyên sâu với trải nghiệm học tập công nghệ cao.</p>
+    </div>
+    <div id="reasonsCarousel" class="carousel slide carousel-multi" data-bs-ride="carousel" data-bs-interval="5000">
+      <div class="carousel-inner">
+        {% if reasons %}
+          {% for feature in reasons %}
+            {% if forloop.first or forloop.counter0|divisibleby:3 %}
+            <div class="carousel-item {% if forloop.first %}active{% endif %}">
+              <div class="row g-4 justify-content-center">
+            {% endif %}
+                <div class="col-md-4">
+                  <article class="feature-card animate-on-scroll{% if force_visible %} visible{% endif %}">
+                    <div class="feature-card__media">
+                      <img src="{{ feature.image_url }}" alt="{{ feature.title }}" class="feature-card__media-image" loading="lazy" />
+                    </div>
+                    <h3 class="feature-card__title">{{ feature.title }}</h3>
+                    <p class="feature-card__body">{{ feature.description }}</p>
+                  </article>
+                </div>
+            {% if forloop.counter|divisibleby:3 or forloop.last %}
+              </div>
+            </div>
+            {% endif %}
+          {% endfor %}
+        {% else %}
+          <div class="carousel-item active">
+            <div class="row justify-content-center">
+              <div class="col-md-6 text-center text-muted py-4">Nội dung đang được cập nhật.</div>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+      {% if reasons|length > 3 %}
+        <button class="carousel-control-prev" type="button" data-bs-target="#reasonsCarousel" data-bs-slide="prev">
+          <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+          <span class="visually-hidden">Trước</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#reasonsCarousel" data-bs-slide="next">
+          <span class="carousel-control-next-icon" aria-hidden="true"></span>
+          <span class="visually-hidden">Sau</span>python manage.py shell
+
+        </button>
+      {% endif %}
+    </div>
+  </div>
+</section>

@@ -1,0 +1,57 @@
+<section class="achievements" id="achievements">
+  <div class="container">
+    <div class="text-center mb-5">
+      <h2 class="section-title">Thành tựu nổi bật</h2>
+      <p class="section-subtitle">
+        Những cột mốc, giải thưởng và hợp tác tiêu biểu minh chứng cho chất lượng đào tạo tại Global English.
+      </p>
+    </div>
+    {% if achievements %}
+    <div id="achievementsCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="6000">
+      <div class="carousel-inner">
+        {% for achievement in achievements %}
+        <div class="carousel-item {% if forloop.first %}active{% endif %}">
+          <article class="achievement-hero-card">
+            <div class="achievement-hero-card__media">
+              <img src="{{ achievement.image_url }}" alt="{{ achievement.image_alt|default:achievement.title }}" loading="lazy" />
+              {% if achievement.year %}<span class="achievement-hero-card__badge">{{ achievement.year }}</span>{% endif %}
+            </div>
+            <div class="achievement-hero-card__body">
+              <span class="achievement-hero-card__kind">{{ achievement.kind }}</span>
+              <h3 class="achievement-hero-card__title">{{ achievement.title }}</h3>
+              {% if achievement.subtitle %}<p class="achievement-hero-card__subtitle">{{ achievement.subtitle }}</p>{% endif %}
+              {% if achievement.description %}<p class="achievement-hero-card__description">{{ achievement.description }}</p>{% endif %}
+              {% if achievement.has_metric %}
+              <div class="achievement-hero-card__metric">
+                <span class="achievement-hero-card__metric-value">{{ achievement.metric_display }}</span>
+                <span class="achievement-hero-card__metric-label">Chỉ số nổi bật</span>
+              </div>
+              {% endif %}
+              {% if achievement.external_url %}
+              <a class="achievement-hero-card__link" href="{{ achievement.external_url }}" target="_blank" rel="noopener">
+                Tìm hiểu thêm <i class="fas fa-arrow-right ms-2"></i>
+              </a>
+              {% endif %}
+            </div>
+          </article>
+        </div>
+        {% endfor %}
+      </div>
+      {% if achievements|length > 1 %}
+      <button class="carousel-control-prev" type="button" data-bs-target="#achievementsCarousel" data-bs-slide="prev">
+        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+        <span class="visually-hidden">Trước</span>
+      </button>
+      <button class="carousel-control-next" type="button" data-bs-target="#achievementsCarousel" data-bs-slide="next">
+        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+        <span class="visually-hidden">Sau</span>
+      </button>
+      {% endif %}
+    </div>
+    {% else %}
+    <div class="row g-4 justify-content-center">
+      <div class="col-md-6 text-center text-muted py-4">Danh sách thành tựu đang được cập nhật.</div>
+    </div>
+    {% endif %}
+  </div>
+</section>

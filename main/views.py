@@ -1,27 +1,15 @@
 from datetime import date
 from typing import Iterable, List, Sequence
 
-from django.db.models import Q, QuerySet
 from django.conf import settings
 from django.contrib.auth import authenticate, login as auth_login
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import redirect, render
-from django.templatetags.static import static
-from django.utils import timezone
-from django.urls import reverse
-from django.utils.http import url_has_allowed_host_and_scheme
-
-from datetime import date
-from typing import Iterable, List, Sequence
-
 from django.db.models import Q, QuerySet
-from django.conf import settings
-from django.contrib.auth import authenticate, login as auth_login
-from django.contrib.auth.decorators import login_required
+from django.http import Http404
 from django.shortcuts import redirect, render
 from django.templatetags.static import static
-from django.utils import timezone
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 
 from .models import (
@@ -80,7 +68,7 @@ def login(request):
             if not remember_checked:
                 request.session.set_expiry(0)
 
-            admin_index = reverse("admin:index")
+            admin_index = reverse("admin:")
             if user.is_staff or user.is_superuser:
                 return redirect(admin_index)
 
@@ -167,6 +155,13 @@ DEFAULT_FOOTER_ABOUT = [
     {"label": "Phương pháp đào tạo", "href": "#features"},
     {"label": "Cơ sở vật chất", "href": "#features"},
 ]
+
+DEFAULT_COURSE_ICONS = {
+    "Beginner": "fas fa-seedling",
+    "Intermediate": "fas fa-chart-line",
+    "Advanced": "fas fa-rocket",
+    "AllLevels": "fas fa-layer-group",
+}
 
 
 #================= Helper Functions =================#
@@ -311,30 +306,60 @@ def _serialize_achievements(
     return cards
 
 
-def _serialize_courses(courses_qs: Iterable[Course]) -> List[dict]:
-    """Chuyển đổi danh sách khóa học thành dict đơn giản.
+def _format_course_duration(duration_hours, lesson_count):
+    """TAo chuoi thoi luong hien thi du tren so gio hoac so buoi neu co."""
+    def _normalize(value):
+        try:
+            number = float(value)
+            if number.is_integer():
+                return int(number)
+            return round(number, 1)
+        except (TypeError, ValueError):
+            return value
 
-    Ánh xạ `level` thành nhãn có thể đọc được bằng Course.LEVEL_CHOICES nếu có.
+    hours = _normalize(duration_hours)
+    lessons = _normalize(lesson_count)
+
+    if hours and lessons:
+        return f"{lessons} buổi • {hours} giờ"
+    if hours:
+        return f"{hours} giờ"
+    if lessons:
+        return f"{lessons} buổi"
+    return "Linh hoạt"
+
+
+def _serialize_courses(courses_qs: Iterable[Course]) -> List[dict]:
+    """Chuyen doi danh sach khoa hoc thanh dict don gian.
+
+    Anh xa `level` sang nhan de doc bang Course.LEVEL_CHOICES neu co.
     """
     level_map = dict(getattr(Course, "LEVEL_CHOICES", []))
-    return [
-        {
-            "title": course.title,
-            "description": course.description,
-            "level": level_map.get(course.level, course.level),
-        }
-        for course in courses_qs
-    ]
+    default_icon = "fas fa-book-open"
+    serialized: List[dict] = []
+    for course in courses_qs:
+        serialized.append(
+            {
+                "title": course.title,
+                "description": course.description,
+                "level": level_map.get(course.level, course.level),
+                "icon": getattr(course, "icon", None)
+                or DEFAULT_COURSE_ICONS.get(course.level, default_icon),
+                "duration": getattr(course, "duration", None)
+                or _format_course_duration(
+                    getattr(course, "duration_hours", None),
+                    getattr(course, "lesson_count", None),
+                ),
+            }
+        )
+    return serialized
 
 
 def _serialize_graduates(
     graduates_qs: Iterable[OutstandingGraduate],
 ) -> List[dict]:
-    """Chuyển đổi thông tin học viên xuất sắc để hiển thị trên trang chủ.
-
-    Sử dụng ảnh placeholder khi không có ảnh được lưu trữ.
-    """
-    serialized = []
+    """Chuyen doi thong tin hoc vien xuat sac thanh cac the hien thi."""
+    serialized: List[dict] = []
     for graduate in graduates_qs:
         serialized.append(
             {
@@ -350,19 +375,14 @@ def _serialize_graduates(
 
 
 def _serialize_testimonials(stories_qs: Iterable[SuccessStory]) -> List[dict]:
-    """Tạo tóm tắt ngắn cho mỗi câu chuyện thành công đã được duyệt.
-
-    Tạo chữ cái đầu (2 chữ) và cắt ngắn trích dẫn xuống 160 ký tự.
-    """
-    testimonials = []
+    """Tao danh sach trich dan ngan gon tu cau chuyen thanh cong."""
+    testimonials: List[dict] = []
     for story in stories_qs:
-        initials = "".join(
-            part[:1] for part in (story.student_name or "").split() if part
-        )
+        initials = "".join(part[:1] for part in (story.student_name or "").split() if part)
         testimonials.append(
             {
                 "quote": (story.story or "")[:160],
-                "initials": initials.upper()[:2] or "HV",
+                "initials": (initials.upper()[:2] or "HV"),
                 "name": story.student_name,
                 "program": story.course_name,
             }
@@ -370,25 +390,13 @@ def _serialize_testimonials(stories_qs: Iterable[SuccessStory]) -> List[dict]:
     return testimonials
 
 
-def home(request):
-    """Hiển thị trang chủ công khai với tất cả dữ liệu context cần thiết.
-
-    Thu thập điểm nổi bật hero, giáo viên, khóa học, học viên tốt nghiệp, 
-    đánh giá và thành tựu.
-    """
+def _build_home_page_context() -> dict:
+    """Tap hop du lieu hien thi trang chu cong khai."""
     now = timezone.now()
 
-    hero_highlights_qs = HeroHighlight.objects.filter(is_active=True).order_by(
-        "order", "id"
-    )
-    teacher_queryset = _get_teacher_queryset().only(
-        "full_name", "specialization", "bio", "start_date", "avatar"
-    )
-    courses_qs = (
-        Course.objects.filter(is_active=True)
-        .only("id", "title", "description", "level")
-        .order_by("id")
-    )
+    hero_highlights_qs = HeroHighlight.objects.filter(is_active=True).order_by("order", "id")
+    teacher_queryset = _get_teacher_queryset().only("full_name", "specialization", "bio", "start_date", "avatar")
+    courses_qs = Course.objects.filter(is_active=True).order_by("id")
     graduates_qs = (
         OutstandingGraduate.objects.filter(is_active=True)
         .filter(
@@ -397,10 +405,7 @@ def home(request):
         )
         .order_by("order", "id")
     )
-    stories_qs = SuccessStory.objects.filter(is_approved=True).order_by(
-        "order", "-created_at"
-    )
-
+    stories_qs = SuccessStory.objects.filter(is_approved=True).order_by("order", "-created_at")
     achievements_qs = (
         Achievement.objects.filter(is_active=True)
         .filter(
@@ -410,16 +415,17 @@ def home(request):
         .order_by("order", "id")
     )
 
+    achievements = _serialize_achievements(achievements_qs)
+
     context = {
-        "nav_links": _build_nav_links(
-            location=NavigationLink.LOCATION_HEADER, default=DEFAULT_NAV_LINKS
-        ),
+        "nav_links": _build_nav_links(location=NavigationLink.LOCATION_HEADER, default=DEFAULT_NAV_LINKS),
         "hero_setting": _get_hero_setting(),
         "hero_highlights": _serialize_highlights(hero_highlights_qs),
         "reasons": _get_active_reasons(),
+        "force_visible": False,
         "teachers": _serialize_teachers(teacher_queryset),
-        "achievements": _serialize_achievements(achievements_qs),
-        "stats": _serialize_achievements(achievements_qs),
+        "achievements": achievements,
+        "stats": list(achievements),
         "courses": _serialize_courses(courses_qs),
         "graduates": _serialize_graduates(graduates_qs),
         "testimonials": _serialize_testimonials(stories_qs),
@@ -432,17 +438,43 @@ def home(request):
             default=DEFAULT_FOOTER_ABOUT,
         ),
     }
+    return context
+
+
+def home(request):
+    """Hien thi trang chu cong khai voi toan bo du lieu context can thiet."""
+    context = _build_home_page_context()
     return render(request, "public/home.html", context)
 
 
-#================= Admin Dashboard =================#
+HOME_SECTION_PARTIALS = {
+    "features": {"template": "public/fragments/features.html", "keys": ["reasons"]},
+    "courses": {"template": "public/fragments/courses.html", "keys": ["courses"]},
+    "teachers": {"template": "public/fragments/teachers.html", "keys": ["teachers"]},
+    "graduates": {"template": "public/fragments/graduates.html", "keys": ["graduates"]},
+    "testimonials": {"template": "public/fragments/testimonials.html", "keys": ["testimonials"]},
+    "achievements": {"template": "public/fragments/achievements.html", "keys": ["achievements"]},
+}
+
+
+def home_section(request, section: str):
+    """Tra ve fragment HTML phan trang chu phuc vu htmx."""
+    config = HOME_SECTION_PARTIALS.get(section)
+    if not config:
+        raise Http404("Không tìm thấy phần trang chủ.")
+
+    context = _build_home_page_context()
+    payload = {key: context.get(key) for key in config["keys"]}
+    payload["section"] = section
+    if request.headers.get("HX-Request") == "true":
+        payload["force_visible"] = True
+    else:
+        payload["force_visible"] = False
+    return render(request, config["template"], payload)
 
 
 def _normalize_service_status(value):
-    """Chuẩn hóa các biểu diễn trạng thái dịch vụ thành 'up', 'down', hoặc 'unknown'.
-
-    Chấp nhận boolean, chuỗi hoặc None.
-    """
+    """Chuan hoa gia tri trang thai dich vu ve 'up', 'down' hoac 'unknown'."""
     if value is None:
         return "unknown"
     normalized = str(value).strip().lower()
@@ -454,10 +486,7 @@ def _normalize_service_status(value):
 
 
 def _get_admin_footer_context():
-    """Thu thập các metadata nhỏ hiển thị trong footer admin (phiên bản, trạng thái dịch vụ, dung lượng).
-
-    Đọc từ settings với các giá trị dự phòng hợp lý.
-    """
+    """Thu thap metadata hien thi trong footer admin (phien ban, trang thai dich vu, dung luong)."""
     version = getattr(settings, "APP_VERSION", getattr(settings, "VERSION", "v1.0.0"))
     environment = getattr(settings, "APP_ENVIRONMENT", getattr(settings, "ENVIRONMENT", "PROD")) or "PROD"
     brand_name = getattr(settings, "SITE_BRAND_NAME", "Global English")
@@ -499,18 +528,18 @@ def admin_dashboard(request):
 
     tasks_pending = [
         {
-            "title": "Duyệt đơn đăng ký #ENR-1045",
-            "subtitle": "Enrollment • chờ duyệt",
+            "title": "Duyet don dang ky #ENR-1045",
+            "subtitle": "Enrollment cho duyet",
             "href": "#",
         },
         {
-            "title": "Xử lý hoàn tiền #REF-232",
-            "subtitle": "Finance • cần xác nhận",
+            "title": "Xu ly hoan tien #REF-232",
+            "subtitle": "Finance can xac nhan",
             "href": "#",
         },
         {
-            "title": "Phản hồi ticket #TCK-481",
-            "subtitle": "Support • SLA 4 giờ",
+            "title": "Phan hoi ticket #TCK-481",
+            "subtitle": "Support con 4 gio SLA",
             "href": "#",
         },
     ]
