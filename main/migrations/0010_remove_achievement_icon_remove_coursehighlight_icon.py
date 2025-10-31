@@ -4,7 +4,6 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("main", "0009_homesetting_alter_teacher_email_alter_teacher_phone_and_more"),
     ]

@@ -1,0 +1,27 @@
+<article class="chart-card" role="region" aria-labelledby="revenue-chart-title">
+    <header class="chart-card__header">
+        <div>
+            <span class="chart-card__badge chart-card__badge--violet">Doanh thu</span>
+            <h3 class="chart-card__title" id="revenue-chart-title">Doanh thu theo tháng</h3>
+        </div>
+    </header>
+    <div class="chart-card__body">
+        <div class="chart-canvas" data-chart-config="{{ charts.revenue }}" role="img" aria-label="Biểu đồ doanh thu theo tháng">
+            <canvas></canvas>
+        </div>
+    </div>
+</article>
+
+<article class="chart-card" role="region" aria-labelledby="enrollment-chart-title">
+    <header class="chart-card__header">
+        <div>
+            <span class="chart-card__badge chart-card__badge--teal">Học viên</span>
+            <h3 class="chart-card__title" id="enrollment-chart-title">Đăng ký và hoàn thành</h3>
+        </div>
+    </header>
+    <div class="chart-card__body">
+        <div class="chart-canvas" data-chart-config="{{ charts.enrollment }}" role="img" aria-label="Biểu đồ đăng ký và hoàn thành">
+            <canvas></canvas>
+        </div>
+    </div>
+</article>

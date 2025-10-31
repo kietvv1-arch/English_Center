@@ -1,0 +1,24 @@
+{% if activities %}
+<ol class="activity-list">
+    {% for item in activities %}
+    <li class="activity-item" tabindex="0" role="article">
+        <div class="activity-item__icon">
+            <i class="fa-solid {{ item.icon }}" aria-hidden="true"></i>
+        </div>
+        <div class="activity-item__body">
+            <span class="activity-item__badge">{{ item.badge }}</span>
+            <p class="activity-item__title">{{ item.title }}</p>
+            <p class="activity-item__subtitle">{{ item.subtitle }}</p>
+            <time class="activity-item__time" datetime="{{ item.datetime|default:item.time }}">
+                {{ item.time }}
+            </time>
+        </div>
+    </li>
+    {% endfor %}
+</ol>
+{% else %}
+<div class="activity-empty">
+    <i class="fa-regular fa-circle-check fa-2x" aria-hidden="true"></i>
+    <p>Chưa có hoạt động gần đây</p>
+</div>
+{% endif %}

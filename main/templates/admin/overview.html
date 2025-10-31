@@ -1,0 +1,115 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}Tổng quan - Global English{% endblock %}
+{% block sidebar_overview_active %}active{% endblock %}
+{% block sidebar_overview_href %}{% url "main:admin_overview" %}{% endblock %}
+
+{% block extra_css %}
+    {{ block.super }}
+    <link rel="stylesheet" href="{% static 'admin/css/overview.css' %}">
+{% endblock %}
+
+{% block extra_js %}
+    {{ block.super }}
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <script src="{% static 'admin/js/overview.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="overview-page" hx-boost="true" hx-indicator=".overview-section">
+    <!-- Summary Section -->
+    <section class="overview-section">
+        <div class="section-header">
+            <div>
+                <h1 class="section-title">Thống kê tổng quan</h1>
+                <p class="section-subtitle">Tổng quan về hiệu suất và hoạt động của hệ thống</p>
+            </div>
+            <button
+                class="btn-soft-dark"
+                type="button"
+                hx-get="{% url 'main:admin_overview_kpis' %}"
+                hx-target="#overview-summary"
+                hx-swap="innerHTML"
+                aria-label="Làm mới dữ liệu thống kê">
+                <i class="fa-solid fa-rotate me-2"></i>Làm mới
+            </button>
+        </div>
+        <div
+            id="overview-summary"
+            class="summary-grid"
+            hx-get="{% url 'main:admin_overview_kpis' %}"
+            hx-trigger="load, every {{ summary_refresh_interval|default:90 }}s"
+            aria-live="polite">
+            {% if summary_cards is not None %}
+                {% include "admin/partials/overview_kpis.html" with cards=summary_cards generated_at=summary_generated_at %}
+            {% else %}
+                {% include "admin/partials/overview_kpis_skeleton.html" %}
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- Charts Section -->
+    <section class="overview-section">
+        <div class="section-header">
+            <div>
+                <h2 class="section-title">Biểu đồ thống kê</h2>
+                <p class="section-subtitle">Doanh thu và hành trình học viên trong 6 tháng gần nhất</p>
+            </div>
+            <button
+                class="btn-soft-dark"
+                type="button"
+                hx-get="{% url 'main:admin_overview_trends' %}"
+                hx-target="#overview-charts"
+                hx-swap="innerHTML"
+                aria-label="Tải lại biểu đồ">
+                <i class="fa-solid fa-rotate me-2"></i>Tải lại
+            </button>
+        </div>
+        <div
+            id="overview-charts"
+            class="chart-grid"
+            hx-get="{% url 'main:admin_overview_trends' %}"
+            hx-trigger="load, every {{ chart_refresh_interval|default:180 }}s"
+            aria-live="polite">
+            {% if charts %}
+                {% include "admin/partials/overview_trends.html" with charts=charts %}
+            {% else %}
+                {% include "admin/partials/overview_trends_skeleton.html" %}
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- Activity Section -->
+    <section class="overview-section">
+        <div class="section-header">
+            <div>
+                <h2 class="section-title">Hoạt động gần đây</h2>
+                <p class="section-subtitle">Những cập nhật mới nhất về học viên, lớp học và đội ngũ</p>
+            </div>
+            <button
+                class="btn-soft-dark"
+                type="button"
+                hx-get="{% url 'main:admin_overview_alerts' %}"
+                hx-target="#overview-activity"
+                hx-swap="innerHTML"
+                aria-label="Làm mới hoạt động">
+                <i class="fa-solid fa-rotate me-2"></i>Làm mới
+            </button>
+        </div>
+        <div
+            id="overview-activity"
+            class="activity-feed"
+            hx-get="{% url 'main:admin_overview_alerts' %}"
+            hx-trigger="load, every {{ activity_refresh_interval|default:120 }}s"
+            aria-live="polite">
+            {% if activity_feed is not None %}
+                {% include "admin/partials/overview_alerts.html" with activities=activity_feed %}
+            {% else %}
+                {% include "admin/partials/overview_alerts_skeleton.html" %}
+            {% endif %}
+        </div>
+    </section>
+</div>
+{% endblock %}

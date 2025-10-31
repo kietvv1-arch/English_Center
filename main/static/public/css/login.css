@@ -22,7 +22,7 @@ html {
 }
 
 .login-body {
-  font-family: "Be Vietnam Pro", "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-family: 'Be Vietnam Pro', 'Segoe UI', system-ui, -apple-system, sans-serif;
   background: var(--surface);
   color: var(--text);
   margin: 0;
@@ -62,7 +62,7 @@ html {
 }
 
 .site-nav .nav-link::after {
-  content: "";
+  content: '';
   position: absolute;
   left: 0.6rem;
   right: 0.6rem;
@@ -140,7 +140,7 @@ html {
 }
 
 .login-card::after {
-  content: "";
+  content: '';
   position: absolute;
   inset: -1px;
   border-radius: inherit;
@@ -202,7 +202,7 @@ html {
 
 .login-card__divider::before,
 .login-card__divider::after {
-  content: "";
+  content: '';
   position: absolute;
   top: 50%;
   width: 40%;
@@ -249,6 +249,7 @@ html {
     width: 100%;
   }
 }
+
 @media (max-width: 575.98px) {
   .login-hero {
     padding-top: calc(var(--nav-height) + 2rem);

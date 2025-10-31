@@ -74,7 +74,10 @@ class TeacherAdmin(admin.ModelAdmin):
         ),
         (
             "Khác",
-            {"classes": ("collapse",), "fields": ("salary", "created_at", "updated_at")},
+            {
+                "classes": ("collapse",),
+                "fields": ("salary", "created_at", "updated_at"),
+            },
         ),
     )
 

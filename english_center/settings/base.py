@@ -1,4 +1,5 @@
-﻿"""Base settings for webEnglishCenter (Django 5.2+)."""
+"""Base settings for webEnglishCenter (Django 5.2+)."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -128,7 +129,9 @@ else:
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
+    },
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
@@ -154,8 +157,18 @@ SASS_PROCESSOR_INCLUDE_DIRS = [
 SASS_PROCESSOR_ENABLED = True
 
 # Email
-EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
+EMAIL_BACKEND = env(
+    "EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend"
+)
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="no-reply@example.com")
+
+# Admin feature flags (can be overridden per environment)
+ADMIN_FEATURE_FLAGS = {
+    "finance": True,
+    "quick_actions": True,
+    "reports": True,
+    "htmx_overview": True,
+}
 
 # CORS / CSRF
 CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[])
@@ -175,8 +188,12 @@ else:
     CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
 
 # Celery
-CELERY_BROKER_URL = env("CELERY_BROKER_URL", default=REDIS_URL or "redis://127.0.0.1:6379/1")
-CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", default=REDIS_URL or "redis://127.0.0.1:6379/2")
+CELERY_BROKER_URL = env(
+    "CELERY_BROKER_URL", default=REDIS_URL or "redis://127.0.0.1:6379/1"
+)
+CELERY_RESULT_BACKEND = env(
+    "CELERY_RESULT_BACKEND", default=REDIS_URL or "redis://127.0.0.1:6379/2"
+)
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_ALWAYS_EAGER = False
 
@@ -207,7 +224,10 @@ LOGGING = {
     },
     "root": {"handlers": ["console"], "level": "INFO"},
     "loggers": {
-        "django.request": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+        "django.request": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
     },
 }
-

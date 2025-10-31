@@ -1,0 +1,18 @@
+{% for card in cards %}
+<article class="summary-card summary-card--{{ card.accent|default:'blue' }}" tabindex="0" role="region" aria-label="{{ card.title }}">
+    <div class="summary-card__icon" aria-hidden="true">
+        <i class="fa-solid {{ card.icon }}"></i>
+    </div>
+    <div class="summary-card__content">
+        <h3 class="summary-card__title">{{ card.title }}</h3>
+        <p class="summary-card__value">{{ card.value }}</p>
+        <p class="summary-card__meta">{{ card.meta }}</p>
+    </div>
+</article>
+{% endfor %}
+{% if generated_at %}
+<div class="summary-updated" role="status" aria-live="polite">
+    <i class="fa-regular fa-clock me-1" aria-hidden="true"></i>
+    Cập nhật: <time datetime="{{ generated_at|date:'c' }}">{{ generated_at|date:"d/m/Y H:i" }}</time>
+</div>
+{% endif %}

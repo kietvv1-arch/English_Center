@@ -9,7 +9,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("main", "0005_alter_teacher_experience_years"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),

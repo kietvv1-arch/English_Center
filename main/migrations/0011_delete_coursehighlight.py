@@ -4,7 +4,6 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("main", "0010_remove_achievement_icon_remove_coursehighlight_icon"),
     ]

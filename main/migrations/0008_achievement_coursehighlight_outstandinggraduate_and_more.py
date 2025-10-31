@@ -7,7 +7,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("main", "0007_alter_teacher_phone_course_sitestat_testimonial"),
     ]

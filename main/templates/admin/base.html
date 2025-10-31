@@ -1,17 +1,17 @@
-{% load static sass_tags %}
+﻿{% load static %}
 <!DOCTYPE html>
 <html lang="vi">
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>{% block title %}Bảng điều khiển - Global English{% endblock %}</title>
+        <title>{% block title %}Admin - Global English{% endblock %}</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-        <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&display=swap&subset=latin,vietnamese" rel="stylesheet" />
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flag-icons@7.2.3/css/flag-icons.min.css">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
-        <link rel="stylesheet" href="{% sass_src 'admin/scss/base.scss' %}" />
+        <link rel="stylesheet" href="{% static 'admin/css/base.css' %}" />
         {% block extra_css %}{% endblock %}
     </head>
     <body>
@@ -30,9 +30,9 @@
                         <p class="sidebar-section__title">Tổng quan</p>
                         <ul class="layout__nav">
                             <li>
-                                <a class="{% block sidebar_dashboard_active %}{% endblock %}" href="{% block sidebar_dashboard_href %}{% url 'main:admin_dashboard' %}{% endblock %}">
+                                <a class="{% block sidebar_overview_active %}{% endblock %}" href="{% block sidebar_overview_href %}{% url 'main:admin_overview' %}{% endblock %}">
                                     <i class="fas fa-chart-line"></i>
-                                    Dashboard
+                                    Tổng quan
                                 </a>
                             </li>
                             <li>
@@ -430,7 +430,7 @@
                             <li><a class="dropdown-item" href="{% block account_profile_href %}#{% endblock %}"><i class="fas fa-id-badge me-2"></i>Hồ sơ của tôi</a></li>
                             <li><a class="dropdown-item" href="{% url 'admin:password_change' %}"><i class="fas fa-key me-2"></i>Đổi mật khẩu</a></li>
                             <li>
-                                <a class="dropdown-item text-danger" href="{% url 'admin:logout' %}">
+                                <a class="dropdown-item text-danger" href="{% url 'main:logout' %}">
                                     <i class="fas fa-arrow-right-from-bracket me-2"></i>Đăng xuất
                                 </a>
                             </li>

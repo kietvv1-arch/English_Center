@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("main", "0008_achievement_coursehighlight_outstandinggraduate_and_more"),
     ]
