@@ -22,6 +22,58 @@ PHONE_REGEX = RegexValidator(
     message="Số điện thoại phải bắt đầu bằng 0 hoặc +84 và gồm đúng 10 chữ số.",
 )
 
+STUDENT_STATUS_ENROLLED = "enrolled"
+STUDENT_STATUS_COMPLETED = "completed"
+class StudentQuerySet(models.QuerySet):
+    def active(self):
+        return self.filter(status=STUDENT_STATUS_ENROLLED)
+class Student(models.Model):
+    """Core learner record managed internally."""
+    class Status(models.TextChoices):
+        ENROLLED = STUDENT_STATUS_ENROLLED, "Đang học"
+        COMPLETED = STUDENT_STATUS_COMPLETED, "Đã tốt nghiệp"
+        PAUSED = "paused", "Tạm dừng"
+        WITHDRAWN = "withdrawn", "Đã rời"
+    full_name = models.CharField(max_length=150, verbose_name="Họ tên")
+    email = models.EmailField(blank=True, verbose_name="Email")
+    phone = models.CharField(max_length=20, blank=True, verbose_name="Số điện thoại")
+    date_of_birth = models.DateField(null=True, blank=True, verbose_name="Ngày sinh")
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=STUDENT_STATUS_ENROLLED,
+        verbose_name="Trạng thái",
+    )
+    primary_course = models.ForeignKey(
+        "Course",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="primary_students",
+        verbose_name="Khóa học chính",
+    )
+    courses = models.ManyToManyField(
+        "Course",
+        blank=True,
+        related_name="students",
+        verbose_name="Các khóa đang tham gia",
+    )
+    enrollment_date = models.DateField(null=True, blank=True, verbose_name="Ngày nhập học")
+    notes = models.TextField(blank=True, verbose_name="Ghi chú nội bộ")
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+    objects = StudentQuerySet.as_manager()
+    class Meta:
+        ordering = ("full_name", "id")
+        verbose_name = "Học viên"
+        verbose_name_plural = "Học viên"
+        indexes = [
+            models.Index(fields=["full_name"]),
+            models.Index(fields=["status"]),
+        ]
+    def __str__(self) -> str:
+        return self.full_name
+
 
 class TeacherQuerySet(models.QuerySet):
     def active(self):
@@ -29,11 +81,11 @@ class TeacherQuerySet(models.QuerySet):
 
     def featured(self):
         """
-        Chỉ giáo viên hiển thị trên Home:
-        - Đang Active
+        Chi giao vien hien thi tren Home:
+        - Dang Active
         - is_featured=True
-        - Nằm trong khoảng publish_at/unpublish_at (nếu đặt)
-        - Đã sắp xếp
+        - Nam trong khoang publish_at/unpublish_at (neu dat)
+        - Da sap xep
         """
         now = timezone.now()
         return (
@@ -48,8 +100,8 @@ class TeacherQuerySet(models.QuerySet):
 
     def public_only_fields(self):
         """
-        Khi render public (Home), chỉ chọn các trường công khai để giảm rò rỉ dữ liệu.
-        Dùng kèm với Proxy model PublicTeacher hoặc trực tiếp trong view.
+        Khi render public (Home), chi chon cac truong cong khai de giam ro ri du lieu.
+        Dung kem voi Proxy model PublicTeacher hoac truc tiep trong view.
         """
         return self.only(
             "id",
@@ -66,12 +118,12 @@ class TeacherQuerySet(models.QuerySet):
 
 
 class Teacher(models.Model):
-    # Quan hệ (dùng AUTH_USER_MODEL để linh hoạt)
+    # Quan he (dung AUTH_USER_MODEL de linh hoat)
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True
     )
 
-    # Thông tin cá nhân
+    # Thong tin ca nhan
     full_name = models.CharField(max_length=100)
     first_name = models.CharField(max_length=50, blank=True)
     last_name = models.CharField(max_length=50, blank=True)
@@ -82,13 +134,13 @@ class Teacher(models.Model):
     )
     birth_date = models.DateField(null=True, blank=True)
 
-    # Liên hệ
+    # Lien he
     email = models.EmailField(max_length=254)
     phone = models.CharField(
         max_length=20, unique=True, validators=[PHONE_REGEX], blank=True, null=True
     )
 
-    # Thông tin chuyên môn
+    # Thong tin chuyen mon
     bio = models.TextField(blank=True, null=True)
     avatar = models.ImageField(upload_to="teachers/avatars/", null=True, blank=True)
     avatar_alt = models.CharField(
@@ -99,13 +151,13 @@ class Teacher(models.Model):
     )
     start_date = models.DateField(null=True, blank=True)
 
-    # Khác (nhạy cảm – KHÔNG render public)
+    # Khac (nhay cam  KHONG render public)
     address = models.TextField(blank=True, null=True)
     salary = models.DecimalField(
         max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)]
     )
 
-    # Quản lý
+    # Quan ly
     STATUS_CHOICES = [
         ("Active", "Đang làm"),
         ("Inactive", "Nghỉ làm"),
@@ -113,7 +165,7 @@ class Teacher(models.Model):
     ]
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="Active")
 
-    # —— Các trường phục vụ HIỂN THỊ TRANG HOME ——
+    #  Cac truong phuc vu HIEN THI TRANG HOME 
     slug = models.SlugField(max_length=140, blank=True, unique=True, db_index=True)
     is_featured = models.BooleanField(
         default=False, help_text="Bật để hiển thị ở trang Home"
@@ -122,7 +174,7 @@ class Teacher(models.Model):
     publish_at = models.DateTimeField(null=True, blank=True)
     unpublish_at = models.DateTimeField(null=True, blank=True)
 
-    # Tự động
+    # Tu dong
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -148,7 +200,7 @@ class Teacher(models.Model):
 
     # --------- Helpers ----------
     def _split_full_name(self) -> None:
-        """Tách first_name/last_name từ full_name (an toàn cho tên 1 từ)."""
+        """Tach first_name/last_name tu full_name (an toan cho ten 1 tu)."""
         if not self.full_name:
             self.first_name = ""
             self.last_name = ""
@@ -174,7 +226,7 @@ class Teacher(models.Model):
             )
 
     def save(self, *args, **kwargs) -> None:
-        # Chuẩn hóa tên + email
+        # Chuan hoa ten + email
         self._split_full_name()
         if self.email:
             self.email = self.email.lower().strip()
@@ -185,13 +237,13 @@ class Teacher(models.Model):
         if not self.slug and self.full_name:
             self.slug = slugify(self.full_name)[:140]
 
-        # Nếu unpublish_at <= publish_at → bỏ unpublish (tránh hiển thị lỗi)
+        # Neu unpublish_at <= publish_at  bo unpublish (tranh hien thi loi)
         if (
             self.publish_at
             and self.unpublish_at
             and self.publish_at >= self.unpublish_at
         ):
-            # không raise để tránh crash khi import dữ liệu—chỉ sửa mềm
+            # khong raise de tranh crash khi import du lieuchi sua mem
             self.unpublish_at = None
 
         super().save(*args, **kwargs)
@@ -219,20 +271,20 @@ class Teacher(models.Model):
     @property
     def avatar_url(self) -> str:
         """
-        Trả URL avatar hoặc placeholder an toàn.
-        - Không ném exception nếu file thiếu/Storage lỗi.
+        Tra URL avatar hoac placeholder an toan.
+        - Khong nem exception neu file thieu/Storage loi.
         """
         try:
             if self.avatar and getattr(self.avatar, "url", None):
                 return self.avatar.url
         except Exception:
-            # Nếu storage lỗi/không có file, luôn trả placeholder
+            # Neu storage loi/khong co file, luon tra placeholder
             pass
         return static("public/images/teacher/placeholder.svg")
 
     @property
     def is_currently_published(self) -> bool:
-        """Có đang hiển thị public (Home) ở thời điểm hiện tại không?"""
+        """Co dang hien thi public (Home) o thoi diem hien tai khong?"""
         if self.status != "Active" or not self.is_featured:
             return False
         now = timezone.now()
@@ -245,21 +297,21 @@ class Teacher(models.Model):
     @property
     def active_classes(self):
         """
-        Lấy danh sách lớp đang dạy (phụ thuộc related_name của FK ở Class).
-        Đảm bảo FK Class.teacher đặt related_name='classes_teaching'.
+        Lay danh sach lop dang day (phu thuoc related_name cua FK o Class).
+        Dam bao FK Class.teacher dat related_name='classes_teaching'.
         """
         return getattr(self, "classes_teaching", models.Manager()).filter(
             status="ongoing"
         )
 
 
-# Proxy model để render PUBLIC an toàn (không lộ fields nhạy cảm)
+# Proxy model de render PUBLIC an toan (khong lo fields nhay cam)
 class PublicTeacher(Teacher):
     """
-    Dùng trong view trang Home:
+    Dung trong view trang Home:
         PublicTeacher.objects.public_only_fields().featured()[:6]
-    hoặc đơn giản:
-        PublicTeacher.objects.featured()[:6]  (vẫn OK, nhưng sẽ select nhiều field hơn)
+    hoac don gian:
+        PublicTeacher.objects.featured()[:6]  (van OK, nhung se select nhieu field hon)
     """
 
     objects = TeacherQuerySet.as_manager()
@@ -403,7 +455,7 @@ class CourseQuerySet(models.QuerySet):
             "unpublish_at",
         )
 
-    # vài scope thường gặp (tùy chọn)
+    # vai scope thuong gap (tuy chon)
     def featured(self):
         return (
             self.filter(is_featured=True)
@@ -492,7 +544,7 @@ class Reason(models.Model):
     def image_url(self) -> str:
         """
         Return the static URL for the reason image or a placeholder.
-        - Không raise nếu thiếu file; luôn có fallback.
+        - Khong raise neu thieu file; luon co fallback.
         """
         if self.image:
             return static(f"public/images/reason/{self.image}")
@@ -521,9 +573,9 @@ class AchievementType(models.TextChoices):
 
 
 class Achievement(models.Model):
-    """Thành tựu, giải thưởng hoặc cột mốc phát triển của trung tâm (hiển thị trên trang chủ)."""
+    """Thanh tuu, giai thuong hoac cot moc phat trien cua trung tam (hien thi tren trang chu)."""
 
-    # Nội dung hiển thị
+    # Noi dung hien thi
     title = models.CharField(max_length=180, verbose_name="Tiêu đề")
     subtitle = models.CharField(
         max_length=220, blank=True, verbose_name="Phụ đề/ngắn gọn"
@@ -547,7 +599,7 @@ class Achievement(models.Model):
         help_text="Văn bản thay thế cho ảnh (SEO/A11y).",
     )
 
-    # Thông tin phụ trợ (năm đạt được, số liệu thống kê...)
+    # Thong tin phu tro (nam dat duoc, so lieu thong ke...)
     year = models.PositiveIntegerField(
         null=True,
         blank=True,
@@ -565,10 +617,10 @@ class Achievement(models.Model):
         help_text="Hậu tố hiển thị (ví dụ: '+', 'k', '%').",
     )
 
-    # Liên kết tham khảo (bài báo, chứng nhận...)
+    # Lien ket tham khao (bai bao, chung nhan...)
     external_url = models.URLField(blank=True, verbose_name="Liên kết ngoài")
 
-    # Điều khiển hiển thị
+    # Dieu khien hien thi
     order = models.PositiveIntegerField(
         default=0, help_text="Thứ tự hiển thị trên trang chủ."
     )
@@ -580,7 +632,7 @@ class Achievement(models.Model):
         null=True, blank=True, verbose_name="Thời điểm gỡ"
     )
 
-    # Tự động ghi nhận thời gian
+    # Tu dong ghi nhan thoi gian
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -646,44 +698,24 @@ class Achievement(models.Model):
 
 
 class OutstandingGraduate(models.Model):
-    """Học viên tốt nghiệp xuất sắc (hiển thị ở Home)."""
+    """Hoc vien tot nghiep xuat sac (hien thi o Home)."""
 
-    # Thông tin hiển thị
+    # Thong tin hien thi
     student_name = models.CharField(max_length=120, verbose_name="Tên học viên")
-    course_name = models.CharField(max_length=150, verbose_name="Khóa học")
-    graduation_date = models.DateField(
-        null=True, blank=True, verbose_name="Ngày tốt nghiệp"
+    achievement = models.CharField(
+        max_length=150, blank=True, verbose_name="Thành tựu đạt được"
     )
-    score_label = models.CharField(
-        max_length=50,
-        blank=True,
-        help_text="Điểm/GPA/Band đạt được (vd: 'IELTS 8.0', 'GPA 3.9/4.0')",
-    )
-
-    # Thành tích chi tiết (tùy chọn số liệu để hiển thị lớn)
-    score_value = models.DecimalField(
-        max_digits=4,
-        decimal_places=1,
-        null=True,
-        blank=True,
-        validators=[MinValueValidator(0), MaxValueValidator(10)],
-        help_text="Giá trị số (vd: 8.0). Bỏ trống nếu không dùng.",
-    )
-    score_suffix = models.CharField(
-        max_length=10, blank=True, help_text="Hậu tố (vd: ' / 9', ' điểm')"
-    )
-
-    testimonial = models.TextField(blank=True, verbose_name="Chia sẻ ngắn")
+    story = models.TextField(blank=True, verbose_name="Câu chuyện / chia sẻ chi tiết")
     photo = models.ImageField(upload_to="graduates/", null=True, blank=True)
     photo_alt = models.CharField(max_length=150, blank=True)
 
-    # Điều khiển hiển thị
+    # Dieu khien hien thi
     order = models.PositiveIntegerField(default=0, help_text="Thứ tự hiển thị")
     is_active = models.BooleanField(default=True)
     publish_at = models.DateTimeField(null=True, blank=True)
     unpublish_at = models.DateTimeField(null=True, blank=True)
 
-    # Tự động
+    # Tu dong
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -698,7 +730,7 @@ class OutstandingGraduate(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.student_name} – {self.course_name}"
+        return f"{self.student_name} - ({self.achievement})" if self.achievement else self.student_name
 
     @property
     def photo_url(self):
@@ -716,44 +748,3 @@ class OutstandingGraduate(models.Model):
         if self.unpublish_at and self.unpublish_at <= now:
             return False
         return True
-
-    @property
-    def score_display(self) -> str:
-        if self.score_value is not None:
-            return f"{self.score_value}{self.score_suffix or ''}"
-        return self.score_label or ""
-
-
-class SuccessStory(models.Model):
-    """Câu chuyện thành công từ học viên."""
-
-    student_name = models.CharField(max_length=100, verbose_name="Tên học viên")
-    course_name = models.CharField(max_length=150, verbose_name="Khóa học")
-    achievement = models.CharField(max_length=150, verbose_name="Thành tựu đạt được")
-    story = models.TextField(verbose_name="Câu chuyện / chia sẻ của học viên")
-
-    photo = models.ImageField(upload_to="success_stories/", blank=True, null=True)
-    is_approved = models.BooleanField(default=False, verbose_name="Đã duyệt hiển thị")
-    order = models.PositiveIntegerField(default=0, help_text="Thứ tự hiển thị")
-    created_at = models.DateTimeField(auto_now_add=True)
-    approved_at = models.DateTimeField(null=True, blank=True)
-
-    class Meta:
-        verbose_name = "Câu chuyện thành công"
-        verbose_name_plural = "Câu chuyện thành công"
-        ordering = ("order", "-created_at")
-
-    def __str__(self):
-        return f"{self.student_name} – {self.achievement}"
-
-    @property
-    def photo_url(self):
-        if self.photo:
-            return self.photo.url
-        return static("public/images/success/placeholder.svg")
-
-    def approve(self):
-        """Duyệt hiển thị lên trang Home."""
-        self.is_approved = True
-        self.approved_at = timezone.now()
-        self.save(update_fields=["is_approved", "approved_at"])

@@ -90,7 +90,7 @@
     </header>
 
     <main>
-      <!-- FEATURES (giữ nguyên) -->
+      <!-- FEATURES-->
       <div
         id="features-fragment"
         hx-get="{% url 'main:home_section' 'features' %}"
@@ -137,20 +137,7 @@
         {% include "public/fragments/graduates.html" %}
       </div>
 
-      
-
-<!-- TESTIMONIALS + ADVISORY (giữ nguyên) -->
-      <div
-        id="testimonials-fragment"
-        hx-get="{% url 'main:home_section' 'testimonials' %}"
-        hx-trigger="load""
-        hx-target="this"
-        hx-swap="outerHTML"
-      >
-        {% include "public/fragments/testimonials.html" %}
-      </div>
-
-      
+      <!-- ======= ACHIEVEMENTS ======= -->      
       <div
         id="achievements-fragment"
         hx-get="{% url 'main:home_section' 'achievements' %}"

@@ -21,8 +21,8 @@ from django.conf import settings
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
-from django.db.models import Avg, Count, Q, QuerySet, Sum
-from django.db.models.functions import TruncMonth
+from django.db.models import Avg, Count, F, Q, QuerySet, Sum
+from django.db.models.functions import Coalesce, TruncMonth
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.templatetags.static import static
@@ -37,8 +37,8 @@ from .models import (
     HomeSetting,
     NavigationLink,
     OutstandingGraduate,
+    Student,
     Reason,
-    SuccessStory,
     Teacher,
 )
 
@@ -60,60 +60,59 @@ class HomeSectionConfig(TypedDict):
     keys: List[str]
 
 
-# Default data is used whenever the database is empty so the landing pages
-# still render a sensible baseline layout.
+# Dữ liệu mặc định (hiển thị khi DB trống) — tiếng Việt
+
 DEFAULT_HERO_SETTING: Dict[str, str] = {
     "eyebrow": "Global English",
-    "typed_text": "Unlock the world with English",
+    "typed_text": "Mở ra thế giới với tiếng Anh",
     "subtitle": (
-        "Personal coaching, interactive classes, and progress tracking "
-        "to help you feel confident in every conversation."
+        "Huấn luyện cá nhân hoá, lớp học tương tác và theo dõi tiến độ "
+        "giúp bạn tự tin trong mọi cuộc trò chuyện."
     ),
-    "primary_cta_label": "Talk to us",
+    "primary_cta_label": "Liên hệ tư vấn",
     "primary_cta_href": "#advisory",
-    "secondary_cta_label": "Watch intro video",
+    "secondary_cta_label": "Xem video giới thiệu",
     "secondary_cta_href": "#intro-video",
 }
 
 DEFAULT_HERO_HIGHLIGHTS: List[Dict[str, str]] = [
     {
         "icon": "fas fa-graduation-cap",
-        "title": "Expert instructors",
-        "description": "Work with native-level teachers and industry mentors.",
+        "title": "Giảng viên chuyên gia",
+        "description": "Học với giáo viên trình độ bản ngữ và cố vấn giàu kinh nghiệm.",
     },
     {
         "icon": "fas fa-chalkboard-teacher",
-        "title": "Interactive classes",
-        "description": "Blended learning with live workshops and practice labs.",
+        "title": "Lớp học tương tác",
+        "description": "Mô hình học kết hợp với workshop trực tiếp và phòng thực hành.",
     },
     {
         "icon": "fas fa-certificate",
-        "title": "Global certificates",
-        "description": "Stay on track with international standards and tracking tools.",
+        "title": "Chứng chỉ toàn cầu",
+        "description": "Học theo chuẩn quốc tế, có công cụ theo dõi tiến độ rõ ràng.",
     },
 ]
 
 DEFAULT_NAV_LINKS: List[NavLink] = [
-    {"label": "About", "href": "#features"},
-    {"label": "Courses", "href": "#courses"},
-    {"label": "Teachers", "href": "#teachers"},
-    {"label": "Graduates", "href": "#graduates"},
-    {"label": "Testimonials", "href": "#testimonials"},
-    {"label": "Achievements", "href": "#achievements"},
+    {"label": "Về chúng tôi", "href": "#features"},
+    {"label": "Khóa học", "href": "#courses"},
+    {"label": "Giảng viên", "href": "#teachers"},
+    {"label": "Học viên tiêu biểu", "href": "#graduates"},
+    {"label": "Thành tựu", "href": "#achievements"},
 ]
 
 DEFAULT_FOOTER_PROGRAMS: List[NavLink] = [
-    {"label": "Communication English", "href": "#courses"},
-    {"label": "Business English", "href": "#courses"},
-    {"label": "IELTS coaching", "href": "#courses"},
-    {"label": "Young learners", "href": "#courses"},
+    {"label": "Giao tiếp", "href": "#courses"},
+    {"label": "Tiếng Anh thương mại", "href": "#courses"},
+    {"label": "Luyện thi IELTS", "href": "#courses"},
+    {"label": "Tiếng Anh thiếu nhi", "href": "#courses"},
 ]
 
 DEFAULT_FOOTER_ABOUT: List[NavLink] = [
-    {"label": "About", "href": "#features"},
-    {"label": "Our teachers", "href": "#teachers"},
-    {"label": "Teaching method", "href": "#features"},
-    {"label": "Facilities", "href": "#features"},
+    {"label": "Giới thiệu", "href": "#features"},
+    {"label": "Đội ngũ giảng viên", "href": "#teachers"},
+    {"label": "Phương pháp giảng dạy", "href": "#features"},
+    {"label": "Cơ sở vật chất", "href": "#features"},
 ]
 
 DEFAULT_COURSE_ICONS: Dict[str, str] = {
@@ -124,13 +123,8 @@ DEFAULT_COURSE_ICONS: Dict[str, str] = {
 }
 
 
+
 def _calculate_experience_years(start_date):
-    """Return full years of experience since ``start_date``.
-
-    We guard against ``None`` and negative values so UI code can rely on a
-    clean (or null) integer.
-    """
-
     if not start_date:
         return None
     today = date.today()
@@ -141,7 +135,12 @@ def _calculate_experience_years(start_date):
 
 
 def _format_course_duration(duration_hours, lesson_count):
-    """Return a friendly duration string (e.g. '12 lessons Ã¢â‚¬Â¢ 36 hours')."""
+    """
+    Trả về chuỗi thân thiện bằng tiếng Việt.
+    Ví dụ: '12 buổi • 36 giờ', '36 giờ', '12 buổi', hoặc 'Linh hoạt'.
+    """
+
+    BULLET = "\u2022"  
 
     def _normalize(value):
         try:
@@ -150,18 +149,21 @@ def _format_course_duration(duration_hours, lesson_count):
                 return int(number)
             return round(number, 1)
         except (TypeError, ValueError):
-            return value
+            return None
 
     hours = _normalize(duration_hours)
     lessons = _normalize(lesson_count)
 
-    if hours and lessons:
-        return f"{lessons} lessons Ã¢â‚¬Â¢ {hours} hours"
-    if hours:
-        return f"{hours} hours"
-    if lessons:
-        return f"{lessons} lessons"
-    return "Flexible"
+    parts = []
+    if lessons is not None and lessons > 0:
+        parts.append(f"{lessons} buổi")
+    if hours is not None and hours > 0:
+        parts.append(f"{hours} giờ")
+
+    if parts:
+        return f" {BULLET} ".join(parts)
+    return "Linh hoạt"
+
 
 
 # ---------------------------------------------------------------------------
@@ -277,12 +279,9 @@ class HomePageContextBuilder:
             "force_visible": False,
             "teachers": self._serialize_teachers(),
             "achievements": achievements,
-            # The design expects ``stats`` to mirror achievements; reuse it to avoid
-            # recomputing similar structures.
             "stats": list(achievements),
             "courses": self._serialize_courses(),
             "graduates": self._serialize_graduates(),
-            "testimonials": self._serialize_testimonials(),
             "footer_programs": self._nav_links(
                 location=NavigationLink.LOCATION_FOOTER_PROGRAM,
                 default=DEFAULT_FOOTER_PROGRAMS,
@@ -385,13 +384,6 @@ class HomePageContextBuilder:
             .order_by("order", "id")
         )
 
-    def _testimonial_queryset(self) -> QuerySet[SuccessStory]:
-        """Return approved success stories newest first."""
-
-        return SuccessStory.objects.filter(is_approved=True).order_by(
-            "order", "-created_at"
-        )
-
     def _achievement_queryset(self) -> QuerySet[Achievement]:
         """Filter achievements that are currently published."""
 
@@ -444,41 +436,20 @@ class HomePageContextBuilder:
                 }
             )
         return payload
-
-    def _serialize_graduates(self) -> List[Dict[str, Any]]:
-        """Return outstanding graduate cards."""
-
-        payload: List[Dict[str, Any]] = []
-        for graduate in self._graduate_queryset():
-            payload.append(
+    
+    def _serialize_graduates(self) -> list[dict]:
+        items = []
+        for g in self._graduate_queryset():  # đảm bảo hàm này trả OutstandingGraduate đã lọc publish/is_active
+            items.append(
                 {
-                    "name": graduate.student_name,
-                    "course": graduate.course_name,
-                    "score": getattr(graduate, "score_display", None),
-                    "testimonial": graduate.testimonial,
-                    "photo_url": getattr(graduate, "photo_url", None)
-                    or static("public/images/graduate/placeholder.svg"),
+                    "name": str(getattr(g, "student_name", "")).strip(),
+                    "achievement": (getattr(g, "achievement", "") or "").strip(),
+                    "story": (getattr(g, "story", "") or "").strip(),
+                    "photo_url": getattr(g, "photo_url", None) or static("public/images/graduate/placeholder.svg"),
                 }
             )
-        return payload
+        return items
 
-    def _serialize_testimonials(self) -> List[Dict[str, Any]]:
-        """Return short quotes derived from success stories."""
-
-        payload: List[Dict[str, Any]] = []
-        for story in self._testimonial_queryset():
-            initials = "".join(
-                part[:1] for part in (story.student_name or "").split() if part
-            )
-            payload.append(
-                {
-                    "quote": (story.story or "")[:160],
-                    "initials": (initials.upper()[:2] or "HV"),
-                    "name": story.student_name,
-                    "program": story.course_name,
-                }
-            )
-        return payload
 
     def _serialize_achievements(self) -> List[Dict[str, Any]]:
         """Return achievement cards including optional metric display."""
@@ -525,10 +496,6 @@ HOME_SECTION_PARTIALS: Dict[str, HomeSectionConfig] = {
     "courses": {"template": "public/fragments/courses.html", "keys": ["courses"]},
     "teachers": {"template": "public/fragments/teachers.html", "keys": ["teachers"]},
     "graduates": {"template": "public/fragments/graduates.html", "keys": ["graduates"]},
-    "testimonials": {
-        "template": "public/fragments/testimonials.html",
-        "keys": ["testimonials"],
-    },
     "achievements": {
         "template": "public/fragments/achievements.html",
         "keys": ["achievements"],
@@ -635,19 +602,20 @@ class AdminOverviewService:
     def _course_summary(self) -> Dict[str, Any]:
         start_month = self._month_start(0)
         return Course.objects.aggregate(
-            mtd=Sum("price", filter=Q(created_at__gte=start_month)),
+            mtd=Sum(
+                self._course_revenue_expression(),
+                filter=Q(created_at__gte=start_month),
+            ),
         )
 
+    def _course_revenue_expression(self):
+        return Coalesce(F("sale_price"), F("price"))
+
     @cached_property
-    def _graduate_summary(self) -> Dict[str, Any]:
-        start_month = self._month_start(0)
-        testimonial_filter = Q(testimonial__isnull=False) & ~Q(testimonial="")
-        rating_filter = Q(score_value__isnull=False)
-        return OutstandingGraduate.objects.aggregate(
-            active=Count("id", filter=Q(is_active=True)),
-            new_term=Count("id", filter=Q(created_at__gte=start_month)),
-            testimonials=Count("id", filter=testimonial_filter),
-            avg_rating=Avg("score_value", filter=rating_filter),
+    def _student_summary(self) -> Dict[str, Any]:
+        return Student.objects.aggregate(
+            active=Count("id", filter=Q(status=Student.Status.ENROLLED)),
+            new_term=Count("id", filter=Q(enrollment_date__gte=self._month_start(1))),
         )
 
     @cached_property
@@ -747,8 +715,7 @@ class AdminOverviewService:
         active_teachers = teacher_stats.get("active") or 0
         total_teachers = teacher_stats.get("total") or 0
         mtd_total = Decimal(course_stats.get("mtd") or 0)
-        testimonials = graduate_stats.get("testimonials") or 0
-        avg_rating = Decimal(graduate_stats.get("avg_rating") or 0)
+
 
         cards = [
             {
@@ -771,7 +738,7 @@ class AdminOverviewService:
                 "id": "revenue",
                 "title": "Doanh thu tháng",
                 "value": self._masked_value(self._format_currency(mtd_total)),
-                "meta": f"{self._format_int(testimonials)} lời chứng thực mới",
+                "meta": f" lời chứng thực mới",
                 "icon": "fa-coins",
                 "accent": "violet",
             },
@@ -796,36 +763,24 @@ class AdminOverviewService:
                 Course.objects.filter(created_at__gte=range_start)
                 .annotate(period=TruncMonth("created_at"))
                 .values("period")
-                .annotate(total=Sum("price"))
+                .annotate(total=Sum(self._course_revenue_expression()))
             )
         }
 
         registration_map = {
             entry["period"].date(): int(entry["count"])
             for entry in (
-                OutstandingGraduate.objects.filter(created_at__gte=range_start)
+                Student.objects.filter(created_at__gte=range_start)
                 .annotate(period=TruncMonth("created_at"))
                 .values("period")
                 .annotate(count=Count("id"))
             )
         }
 
-        completion_map = {
-            entry["period"].date(): int(entry["count"])
-            for entry in (
-                OutstandingGraduate.objects.filter(
-                    publish_at__isnull=False, publish_at__gte=range_start
-                )
-                .annotate(period=TruncMonth("publish_at"))
-                .values("period")
-                .annotate(count=Count("id"))
-            )
-        }
 
         labels: List[str] = []
         revenue_values: List[float] = []
         registrations: List[int] = []
-        completions: List[int] = []
 
         for offset in range(months_back, -1, -1):
             start = self._month_start(offset)
@@ -833,7 +788,6 @@ class AdminOverviewService:
             labels.append(start.strftime("%m/%Y"))
             revenue_values.append(round(revenue_map.get(period_date, 0), 2))
             registrations.append(registration_map.get(period_date, 0))
-            completions.append(completion_map.get(period_date, 0))
 
         revenue_chart = {
             "type": "bar",
@@ -878,15 +832,7 @@ class AdminOverviewService:
                         "backgroundColor": "rgba(56, 189, 248, 0.25)",
                         "tension": 0.35,
                         "fill": True,
-                    },
-                    {
-                        "label": "Hoàn thành",
-                        "data": completions,
-                        "borderColor": "#22c55e",
-                        "backgroundColor": "rgba(34, 197, 94, 0.2)",
-                        "tension": 0.35,
-                        "fill": True,
-                    },
+                    }
                 ],
             },
             "options": {
@@ -916,36 +862,18 @@ class AdminOverviewService:
         limit = max(limit, 1)
         events: List[Dict[str, Any]] = []
 
-        student_rows = list(
-            OutstandingGraduate.objects.order_by("-created_at")
-            .values("id", "student_name", "course_name", "created_at")[:limit]
-        )
-        for student in student_rows:
+        student_rows = (
+            Student.objects.order_by("-created_at")
+            .only("id", "full_name", "created_at")[:limit])
+        for grad in student_rows:
             events.append(
                 {
-                    "id": f"student-{student['id']}",
+                    "id": f"student-{grad.id}",
                     "icon": "fa-user-plus",
                     "badge": "Học viên",
-                    "title": f"Học viên mới: {student.get('student_name') or 'Chưa rõ'}",
-                    "subtitle": student.get("course_name") or "Đăng ký mới",
-                    "date": student.get("created_at") or self.now,
-                }
-            )
-
-        completed_rows = list(
-            OutstandingGraduate.objects.filter(publish_at__isnull=False)
-            .order_by("-publish_at")
-            .values("id", "student_name", "course_name", "publish_at", "updated_at")[:limit]
-        )
-        for completed in completed_rows:
-            events.append(
-                {
-                    "id": f"completed-{completed['id']}",
-                    "icon": "fa-graduation-cap",
-                    "badge": "Hoàn thành",
-                    "title": f"Tốt nghiệp: {completed.get('student_name') or 'Học viên'}",
-                    "subtitle": completed.get("course_name") or "Hoàn thành khóa học",
-                    "date": completed.get("publish_at") or completed.get("updated_at") or self.now,
+                    "title": f"Học viên mới: {grad.student.full_name or 'Chưa rõ'}",
+                    "subtitle": grad.course_display_name or "Đăng ký mới",
+                    "date": grad.created_at or self.now,
                 }
             )
 
@@ -1007,8 +935,16 @@ def admin_overview(request: HttpRequest) -> HttpResponse:
 
     service = AdminOverviewService(request.user)
     summary_payload = service.peek_kpis()
+    if summary_payload is None:
+        summary_payload = service.get_kpis()
+
     chart_payload = service.peek_charts()
+    if chart_payload is None:
+        chart_payload = service.get_chart_payload()
+
     activity_feed = service.peek_activity_feed()
+    if activity_feed is None:
+        activity_feed = service.get_activity_feed()
 
     summary_cards: Optional[List[Dict[str, Any]]]
     summary_generated_at: Optional[datetime]

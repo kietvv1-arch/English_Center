@@ -9,6 +9,7 @@ from .models import (
     NavigationLink,
     OutstandingGraduate,
     Reason,
+    Student,
     Teacher,
 )
 
@@ -149,12 +150,29 @@ class AchievementAdmin(admin.ModelAdmin):
     readonly_fields = ("created_at", "updated_at")
 
 
+@admin.register(Student)
+class StudentAdmin(admin.ModelAdmin):
+    list_display = (
+        "full_name",
+        "email",
+        "phone",
+        "status",
+        "primary_course",
+        "updated_at",
+    )
+    list_filter = ("status", "primary_course")
+    search_fields = ("full_name", "email", "phone")
+    autocomplete_fields = ("primary_course", "courses")
+    filter_horizontal = ("courses",)
+    ordering = ("full_name", "id")
+    readonly_fields = ("created_at", "updated_at")
+
+
 @admin.register(OutstandingGraduate)
 class OutstandingGraduateAdmin(admin.ModelAdmin):
     list_display = (
         "student_name",
-        "course_name",
-        "score_display",
+        "achievement",
         "order",
         "is_active",
         "publish_at",
@@ -162,6 +180,42 @@ class OutstandingGraduateAdmin(admin.ModelAdmin):
         "updated_at",
     )
     list_filter = ("is_active", ("publish_at", admin.DateFieldListFilter))
-    search_fields = ("student_name", "course_name", "testimonial")
+    search_fields = ("student_name", "course_name", "achievement", "story")
     ordering = ("order", "id")
     readonly_fields = ("created_at", "updated_at")
+    fieldsets = (
+        (
+            "Thông tin học viên",
+            {
+                "fields": (
+                    ("student_name", "course_name"),
+                    "achievement",
+                    "story",
+                )
+            },
+        ),
+        (
+            "Điểm số & hình ảnh",
+            {
+                "classes": ("collapse",),
+                "fields": (
+                    ("score_label", "score_value", "score_suffix"),
+                    ("photo", "photo_alt"),
+                ),
+            },
+        ),
+        (
+            "Hiển thị",
+            {
+                "classes": ("collapse",),
+                "fields": (
+                    "order",
+                    "is_active",
+                    "publish_at",
+                    "unpublish_at",
+                    "created_at",
+                    "updated_at",
+                ),
+            },
+        ),
+    )

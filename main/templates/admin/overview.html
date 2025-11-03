@@ -13,7 +13,7 @@
 {% block extra_js %}
     {{ block.super }}
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
     <script src="{% static 'admin/js/overview.js' %}"></script>
 {% endblock %}
 
@@ -40,7 +40,7 @@
             id="overview-summary"
             class="summary-grid"
             hx-get="{% url 'main:admin_overview_kpis' %}"
-            hx-trigger="load, every {{ summary_refresh_interval|default:90 }}s"
+            hx-trigger="{% if summary_cards %}every {{ summary_refresh_interval|default:90 }}s{% else %}load, every {{ summary_refresh_interval|default:90 }}s{% endif %}"
             aria-live="polite">
             {% if summary_cards is not None %}
                 {% include "admin/partials/overview_kpis.html" with cards=summary_cards generated_at=summary_generated_at %}
@@ -71,7 +71,7 @@
             id="overview-charts"
             class="chart-grid"
             hx-get="{% url 'main:admin_overview_trends' %}"
-            hx-trigger="load, every {{ chart_refresh_interval|default:180 }}s"
+            hx-trigger="{% if charts %}every {{ chart_refresh_interval|default:180 }}s{% else %}load, every {{ chart_refresh_interval|default:180 }}s{% endif %}"
             aria-live="polite">
             {% if charts %}
                 {% include "admin/partials/overview_trends.html" with charts=charts %}
@@ -102,7 +102,7 @@
             id="overview-activity"
             class="activity-feed"
             hx-get="{% url 'main:admin_overview_alerts' %}"
-            hx-trigger="load, every {{ activity_refresh_interval|default:120 }}s"
+            hx-trigger="{% if activity_feed %}every {{ activity_refresh_interval|default:120 }}s{% else %}load, every {{ activity_refresh_interval|default:120 }}s{% endif %}"
             aria-live="polite">
             {% if activity_feed is not None %}
                 {% include "admin/partials/overview_alerts.html" with activities=activity_feed %}
