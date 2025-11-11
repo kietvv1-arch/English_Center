@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320">
+  <rect x="0" y="0" width="320" height="320" rx="24" fill="#E9D5FF"/>
+  <path d="M60 232 Q160 284 260 232" fill="#D8B4FE"/>
+  <circle cx="160" cy="128" r="80" fill="#8B5CF6"/>
+  <circle cx="136" cy="118" r="12" fill="#F5F3FF"/>
+  <circle cx="184" cy="118" r="12" fill="#F5F3FF"/>
+  <path d="M124 188 Q160 226 196 188" fill="none" stroke="#DDD6FE" stroke-width="10" stroke-linecap="round"/>
+  <rect x="80" y="232" width="160" height="60" rx="24" fill="#5B21B6"/>
+  <text x="160" y="270" text-anchor="middle" font-size="18" font-family="Arial, sans-serif" fill="#EDE9FE">
+    Hoang Long
+  </text>
+</svg>

@@ -58,9 +58,11 @@ class Student(models.Model):
         related_name="students",
         verbose_name="Các khóa đang tham gia",
     )
-    enrollment_date = models.DateField(null=True, blank=True, verbose_name="Ngày nhập học")
+    enrollment_date = models.DateField(
+        null=True, blank=True, verbose_name="Ngày nhập học", db_index=True
+    )
     notes = models.TextField(blank=True, verbose_name="Ghi chú nội bộ")
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True, editable=False, db_index=True)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
     objects = StudentQuerySet.as_manager()
     class Meta:
@@ -73,6 +75,85 @@ class Student(models.Model):
         ]
     def __str__(self) -> str:
         return self.full_name
+
+
+class StudentPaymentQuerySet(models.QuerySet):
+    def confirmed(self):
+        return self.filter(status=StudentPayment.Status.CONFIRMED)
+
+
+class StudentPayment(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Chờ xử lý"
+        CONFIRMED = "confirmed", "Đã thu"
+        REFUNDED = "refunded", "Đã hoàn"
+
+    class Method(models.TextChoices):
+        CASH = "cash", "Tiền mặt"
+        TRANSFER = "transfer", "Chuyển khoản"
+        CARD = "card", "Thẻ"
+        OTHER = "other", "Khác"
+
+    student = models.ForeignKey(
+        "Student",
+        on_delete=models.CASCADE,
+        related_name="payments",
+        verbose_name="Học viên",
+    )
+    course = models.ForeignKey(
+        "Course",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="payments",
+        verbose_name="Khóa học",
+    )
+    amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(0)],
+        verbose_name="Số tiền",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.CONFIRMED,
+        verbose_name="Trạng thái",
+    )
+    method = models.CharField(
+        max_length=20,
+        choices=Method.choices,
+        default=Method.CASH,
+        verbose_name="Phương thức",
+    )
+    reference_code = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name="Mã giao dịch",
+    )
+    note = models.TextField(blank=True, verbose_name="Ghi chú")
+    paid_at = models.DateTimeField(verbose_name="Thời gian thu", db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True, editable=False, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    objects = StudentPaymentQuerySet.as_manager()
+
+    class Meta:
+        verbose_name = "Giao dịch học phí"
+        verbose_name_plural = "Giao dịch học phí"
+        ordering = ("-paid_at", "-id")
+        indexes = [
+            models.Index(fields=["paid_at"]),
+            models.Index(fields=["status", "paid_at"]),
+            models.Index(fields=["student", "status"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.student.full_name} - {self.amount} VND"
+
+    @property
+    def is_confirmed(self) -> bool:
+        return self.status == self.Status.CONFIRMED
 
 
 class TeacherQuerySet(models.QuerySet):
@@ -175,7 +256,7 @@ class Teacher(models.Model):
     unpublish_at = models.DateTimeField(null=True, blank=True)
 
     # Tu dong
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True, editable=False, db_index=True)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     objects = TeacherQuerySet.as_manager()

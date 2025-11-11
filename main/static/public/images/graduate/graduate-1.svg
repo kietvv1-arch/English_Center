@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320">
+  <rect x="0" y="0" width="320" height="320" rx="24" fill="#E0F2FE"/>
+  <path d="M60 232 Q160 284 260 232" fill="#BAE6FD"/>
+  <circle cx="160" cy="128" r="80" fill="#0284C7"/>
+  <circle cx="136" cy="118" r="12" fill="#F8FAFC"/>
+  <circle cx="184" cy="118" r="12" fill="#F8FAFC"/>
+  <path d="M124 188 Q160 226 196 188" fill="none" stroke="#F8FAFC" stroke-width="10" stroke-linecap="round"/>
+  <rect x="80" y="232" width="160" height="60" rx="24" fill="#0C4A6E"/>
+  <text x="160" y="270" text-anchor="middle" font-size="18" font-family="Arial, sans-serif" fill="#E0F2FE">
+    Bao Lam
+  </text>
+</svg>

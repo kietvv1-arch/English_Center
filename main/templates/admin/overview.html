@@ -40,7 +40,7 @@
             id="overview-summary"
             class="summary-grid"
             hx-get="{% url 'main:admin_overview_kpis' %}"
-            hx-trigger="{% if summary_cards %}every {{ summary_refresh_interval|default:90 }}s{% else %}load, every {{ summary_refresh_interval|default:90 }}s{% endif %}"
+            hx-trigger="load delay:150ms, every {{ summary_refresh_interval|default:90 }}s"
             aria-live="polite">
             {% if summary_cards is not None %}
                 {% include "admin/partials/overview_kpis.html" with cards=summary_cards generated_at=summary_generated_at %}
@@ -55,23 +55,61 @@
         <div class="section-header">
             <div>
                 <h2 class="section-title">Biểu đồ thống kê</h2>
-                <p class="section-subtitle">Doanh thu và hành trình học viên trong 6 tháng gần nhất</p>
+                <p class="section-subtitle">Doanh thu và hành trình học viên theo khoảng thời gian tuỳ chọn</p>
             </div>
-            <button
-                class="btn-soft-dark"
-                type="button"
-                hx-get="{% url 'main:admin_overview_trends' %}"
-                hx-target="#overview-charts"
-                hx-swap="innerHTML"
-                aria-label="Tải lại biểu đồ">
-                <i class="fa-solid fa-rotate me-2"></i>Tải lại
-            </button>
+            <div class="chart-header-actions" role="group" aria-label="Điều khiển biểu đồ">
+                <div class="chart-range-dropdown" data-active-range="{{ chart_range_selected }}">
+                    <button
+                        type="button"
+                        class="btn-soft-dark btn-range-toggle"
+                        aria-haspopup="true"
+                        aria-expanded="false">
+                        <i class="fa-regular fa-calendar me-2"></i>
+                        <span class="btn-range-label">
+                            {% for key, label, _months_back in chart_range_options %}
+                                {% if key == chart_range_selected %}{{ label }}{% endif %}
+                            {% endfor %}
+                        </span>
+                        <i class="fa-solid fa-chevron-down ms-2"></i>
+                    </button>
+                    <div class="chart-range-menu" role="menu">
+                        {% for key, label, _months_back in chart_range_options %}
+                            <button
+                                type="button"
+                                class="btn-range {% if key == chart_range_selected %}is-active{% endif %}"
+                                data-range="{{ key }}"
+                                data-label="{{ label }}"
+                                hx-get="{% url 'main:admin_overview_trends' %}"
+                                hx-target="#overview-charts"
+                                hx-swap="innerHTML"
+                                hx-vals='{"range": "{{ key }}"}'
+                                role="menuitemradio"
+                                aria-checked="{% if key == chart_range_selected %}true{% else %}false{% endif %}">
+                                <span>{{ label }}</span>
+                                <i class="fa-solid fa-check"></i>
+                            </button>
+                        {% endfor %}
+                    </div>
+                </div>
+                <input type="hidden" id="overview-chart-range" name="range" value="{{ chart_range_selected }}">
+                <button
+                    class="btn-soft-dark"
+                    type="button"
+                    hx-get="{% url 'main:admin_overview_trends' %}"
+                    hx-target="#overview-charts"
+                    hx-swap="innerHTML"
+                    hx-include="#overview-chart-range"
+                    aria-label="Tải lại biểu đồ">
+                    <i class="fa-solid fa-rotate me-2"></i>Tải lại
+                </button>
+            </div>
         </div>
         <div
             id="overview-charts"
             class="chart-grid"
             hx-get="{% url 'main:admin_overview_trends' %}"
-            hx-trigger="{% if charts %}every {{ chart_refresh_interval|default:180 }}s{% else %}load, every {{ chart_refresh_interval|default:180 }}s{% endif %}"
+            hx-include="#overview-chart-range"
+            hx-trigger="load delay:250ms, every {{ chart_refresh_interval|default:180 }}s"
             aria-live="polite">
             {% if charts %}
                 {% include "admin/partials/overview_trends.html" with charts=charts %}
@@ -102,7 +140,7 @@
             id="overview-activity"
             class="activity-feed"
             hx-get="{% url 'main:admin_overview_alerts' %}"
-            hx-trigger="{% if activity_feed %}every {{ activity_refresh_interval|default:120 }}s{% else %}load, every {{ activity_refresh_interval|default:120 }}s{% endif %}"
+            hx-trigger="load delay:300ms, every {{ activity_refresh_interval|default:120 }}s"
             aria-live="polite">
             {% if activity_feed is not None %}
                 {% include "admin/partials/overview_alerts.html" with activities=activity_feed %}

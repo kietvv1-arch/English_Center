@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320">
+  <rect x="0" y="0" width="320" height="320" rx="24" fill="#EEF2FF"/>
+  <circle cx="160" cy="120" r="70" fill="#6366F1"/>
+  <circle cx="140" cy="110" r="12" fill="#FFFFFF"/>
+  <circle cx="180" cy="110" r="12" fill="#FFFFFF"/>
+  <path d="M120 190 Q160 228 200 190" fill="none" stroke="#E0E7FF" stroke-width="10" stroke-linecap="round"/>
+  <rect x="72" y="200" width="176" height="80" rx="28" fill="#4338CA"/>
+  <text x="160" y="252" text-anchor="middle" font-size="20" font-family="Arial, sans-serif" fill="#F9FAFB">
+    Minh Anh
+  </text>
+</svg>

@@ -255,6 +255,37 @@
     });
   }, 100);
 
+  function syncRangeControls() {
+    const headerActions = document.querySelector(".chart-header-actions");
+    if (!headerActions) return;
+    const dropdown = headerActions.querySelector(".chart-range-dropdown");
+    if (!dropdown) return;
+    const hidden = headerActions.querySelector("#overview-chart-range");
+    const range = hidden?.value || dropdown.getAttribute("data-active-range");
+    if (!range) return;
+
+    const labelEl = dropdown.querySelector(".btn-range-label");
+    let activeLabel = null;
+    dropdown.querySelectorAll(".btn-range").forEach((button) => {
+      const isActive = button.getAttribute("data-range") === range;
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-pressed", isActive ? "true" : "false");
+      button.setAttribute("aria-checked", isActive ? "true" : "false");
+      if (isActive) {
+        activeLabel = button.getAttribute("data-label") || button.textContent.trim();
+      }
+    });
+
+    if (labelEl && activeLabel) {
+      labelEl.textContent = activeLabel;
+    }
+
+    dropdown.setAttribute("data-active-range", range);
+    if (hidden && hidden.value !== range) {
+      hidden.value = range;
+    }
+  }
+
   // Initialize when DOM is ready
   function init() {
     if (document.readyState === 'loading') {
@@ -292,6 +323,149 @@
         initCharts(target);
       });
     });
+
+    document.addEventListener("overview:lazy-reload", (event) => {
+      const detail = event.detail || {};
+      const selector = detail.target;
+      if (!selector) return;
+      const target = document.querySelector(selector);
+      if (!target) return;
+
+      const url = target.getAttribute("hx-get");
+      if (!url) return;
+
+      const swap = target.getAttribute("hx-swap") || "innerHTML";
+
+      let headers = undefined;
+      const headersAttr = target.getAttribute("hx-headers");
+      if (headersAttr) {
+        try {
+          headers = JSON.parse(headersAttr);
+        } catch (err) {
+          console.warn("overview: invalid hx-headers JSON", err);
+        }
+      }
+
+      const delay =
+        typeof detail.delay === "number" && !Number.isNaN(detail.delay)
+          ? detail.delay
+          : 800;
+
+      if (!window.htmx || typeof window.htmx.ajax !== "function") {
+        console.warn("overview: htmx not available for lazy reload");
+        return;
+      }
+
+      const values = detail.params ? { ...detail.params } : {};
+      const includeSelector = target.getAttribute("hx-include");
+      if (includeSelector) {
+        document.querySelectorAll(includeSelector).forEach((includeEl) => {
+          if (includeEl instanceof HTMLFormElement) {
+            const formData = new FormData(includeEl);
+            formData.forEach((value, key) => {
+              if (values[key] === undefined) {
+                values[key] = value;
+              }
+            });
+          } else if (
+            includeEl instanceof HTMLInputElement ||
+            includeEl instanceof HTMLSelectElement ||
+            includeEl instanceof HTMLTextAreaElement
+          ) {
+            const name = includeEl.name;
+            if (name && values[name] === undefined) {
+              values[name] = includeEl.value;
+            }
+          }
+        });
+      }
+
+      setTimeout(() => {
+        window.htmx.ajax("GET", url, {
+          target: target,
+          swap: swap,
+          headers: headers,
+          values: Object.keys(values).length ? values : undefined,
+        });
+      }, delay);
+    });
+
+    const headerActionsRoot = document.querySelector(".chart-header-actions");
+    if (headerActionsRoot) {
+      const dropdown = headerActionsRoot.querySelector(".chart-range-dropdown");
+      const hiddenInput = headerActionsRoot.querySelector("#overview-chart-range");
+      const toggleBtn = dropdown?.querySelector(".btn-range-toggle");
+
+      const closeMenu = () => {
+        if (!dropdown || !toggleBtn) return;
+        dropdown.classList.remove("is-open");
+        toggleBtn.setAttribute("aria-expanded", "false");
+      };
+
+      const openMenu = () => {
+        if (!dropdown || !toggleBtn) return;
+        dropdown.classList.add("is-open");
+        toggleBtn.setAttribute("aria-expanded", "true");
+      };
+
+      toggleBtn?.addEventListener("click", (event) => {
+        event.preventDefault();
+        if (!dropdown) return;
+        const isOpen = dropdown.classList.contains("is-open");
+        if (isOpen) {
+          closeMenu();
+        } else {
+          openMenu();
+        }
+      });
+
+      document.addEventListener("click", (event) => {
+        if (!dropdown) return;
+        if (!dropdown.contains(event.target)) {
+          closeMenu();
+        }
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          closeMenu();
+        }
+      });
+
+      dropdown?.addEventListener("click", (event) => {
+        const option = event.target.closest(".btn-range");
+        if (!option || !(option instanceof HTMLElement)) {
+          return;
+        }
+        const range = option.getAttribute("data-range");
+        if (!range) {
+          return;
+        }
+        if (hiddenInput) {
+          hiddenInput.value = range;
+        }
+        if (dropdown) {
+          dropdown.setAttribute("data-active-range", range);
+        }
+        closeMenu();
+        syncRangeControls();
+      });
+
+      document.addEventListener("overview:update-range", (event) => {
+        const range = event.detail?.range;
+        if (!range) return;
+        if (hiddenInput) {
+          hiddenInput.value = range;
+        }
+        if (dropdown) {
+          dropdown.setAttribute("data-active-range", range);
+        }
+        closeMenu();
+        syncRangeControls();
+      });
+    }
+
+    syncRangeControls();
 
     // Responsive chart handling
     const resizeHandler = debounce(() => {

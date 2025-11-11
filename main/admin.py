@@ -10,6 +10,7 @@ from .models import (
     OutstandingGraduate,
     Reason,
     Student,
+    StudentPayment,
     Teacher,
 )
 
@@ -219,3 +220,21 @@ class OutstandingGraduateAdmin(admin.ModelAdmin):
             },
         ),
     )
+
+
+@admin.register(StudentPayment)
+class StudentPaymentAdmin(admin.ModelAdmin):
+    list_display = (
+        "student",
+        "course",
+        "amount",
+        "status",
+        "method",
+        "paid_at",
+        "updated_at",
+    )
+    list_filter = ("status", "method", ("paid_at", admin.DateFieldListFilter))
+    search_fields = ("student__full_name", "reference_code", "note")
+    autocomplete_fields = ("student", "course")
+    ordering = ("-paid_at", "-id")
+    readonly_fields = ("created_at", "updated_at")
