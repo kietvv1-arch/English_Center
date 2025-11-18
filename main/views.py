@@ -11,6 +11,9 @@ data flow without jumping between modules.
 """
 
 from datetime import date, datetime, timedelta
+from io import BytesIO
+
+import pandas as pd
 from decimal import Decimal
 import json
 import logging
@@ -21,11 +24,15 @@ from time import monotonic
 
 from django.conf import settings
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
-from django.db.models import Count, Q, QuerySet, Sum
+from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
+from django.db import transaction
+from django.db.models import Count, Prefetch, Q, QuerySet, Sum
+from django.db.models.functions import TruncDay, TruncMonth
 from django.http import Http404, HttpRequest, HttpResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.templatetags.static import static
 from django.urls import reverse
 from django.utils import timezone
@@ -40,6 +47,8 @@ from .models import (
     OutstandingGraduate,
     Student,
     StudentPayment,
+    StudyLevel,
+    StudyProgram,
     Reason,
     Teacher,
 )
@@ -815,6 +824,57 @@ class AdminOverviewService:
             year -= 1
         return datetime(year, month, 1, tzinfo=self.tz)
 
+    def _aggregate_payment_totals(
+        self, since: datetime, *, granularity: str = "month"
+    ) -> Dict[str, float]:
+        """Return payment totals bucketed by ``granularity`` (month/day)."""
+
+        truncate = TruncDay if granularity == "day" else TruncMonth
+        rows = (
+            StudentPayment.objects.confirmed()
+            .filter(paid_at__gte=since)
+            .annotate(period=truncate("paid_at", tzinfo=self.tz))
+            .values("period")
+            .annotate(total=Sum("amount"))
+            .order_by("period")
+        )
+        buckets: Dict[str, float] = {}
+        for row in rows:
+            period = row.get("period")
+            if not period:
+                continue
+            buckets[period.date().isoformat()] = float(row.get("total") or 0.0)
+        return buckets
+
+    def _aggregate_student_counts(
+        self,
+        *,
+        field: str,
+        since: datetime,
+        status: Optional[str] = None,
+        granularity: str = "month",
+    ) -> Dict[str, int]:
+        """Return student counts bucketed by ``granularity``."""
+
+        truncate = TruncDay if granularity == "day" else TruncMonth
+        queryset = Student.objects
+        if status:
+            queryset = queryset.filter(status=status)
+        queryset = queryset.filter(**{f"{field}__gte": since})
+        rows = (
+            queryset.annotate(period=truncate(field, tzinfo=self.tz))
+            .values("period")
+            .annotate(total=Count("id"))
+            .order_by("period")
+        )
+        buckets: Dict[str, int] = {}
+        for row in rows:
+            period = row.get("period")
+            if not period:
+                continue
+            buckets[period.date().isoformat()] = int(row.get("total") or 0)
+        return buckets
+
     def get_kpis(self) -> Dict[str, Any]:
         cache_key = self._cache_key("kpis")
         payload = self._cache_get(cache_key)
@@ -887,46 +947,29 @@ class AdminOverviewService:
                 f"{start_local.strftime('%d/%m')} - {end_local.strftime('%d/%m')}"
             )
 
-        payments = (
-            StudentPayment.objects.confirmed()
-            .filter(paid_at__gte=range_start)
-            .values_list("paid_at", "amount")
+        revenue_by_day = self._aggregate_payment_totals(
+            range_start, granularity="day"
         )
-        for paid_at, amount in payments.iterator(chunk_size=512):
-            if not paid_at:
-                continue
-            for idx, (start, end) in enumerate(spans):
-                if start <= paid_at < end:
-                    revenue_values[idx] += float(amount or 0)
-                    break
+        registrations_by_day = self._aggregate_student_counts(
+            field="created_at",
+            since=range_start,
+            granularity="day",
+        )
+        completions_by_day = self._aggregate_student_counts(
+            field="updated_at",
+            since=range_start,
+            status=Student.Status.COMPLETED,
+            granularity="day",
+        )
 
-        registration_qs = (
-            Student.objects.filter(created_at__gte=range_start)
-            .only("created_at")
-            .values_list("created_at", flat=True)
-        )
-        for created_at in registration_qs.iterator(chunk_size=512):
-            if not created_at:
-                continue
-            for idx, (start, end) in enumerate(spans):
-                if start <= created_at < end:
-                    registrations[idx] += 1
-                    break
-
-        completion_qs = (
-            Student.objects.filter(
-                status=Student.Status.COMPLETED, updated_at__gte=range_start
-            )
-            .only("updated_at")
-            .values_list("updated_at", flat=True)
-        )
-        for updated_at in completion_qs.iterator(chunk_size=512):
-            if not updated_at:
-                continue
-            for idx, (start, end) in enumerate(spans):
-                if start <= updated_at < end:
-                    completions[idx] += 1
-                    break
+        for idx, (start, end) in enumerate(spans):
+            cursor = start
+            while cursor < end:
+                key = cursor.date().isoformat()
+                revenue_values[idx] += revenue_by_day.get(key, 0.0)
+                registrations[idx] += registrations_by_day.get(key, 0)
+                completions[idx] += completions_by_day.get(key, 0)
+                cursor += timedelta(days=1)
 
         revenue_values = [round(value, 2) for value in revenue_values]
 
@@ -1018,44 +1061,16 @@ class AdminOverviewService:
 
         range_start = self._month_start(months_back)
 
-        revenue_map: Dict[str, float] = {}
-        payment_iterable = StudentPayment.objects.confirmed().filter(
-            paid_at__gte=range_start
-        ).values_list("paid_at", "amount")
-        for paid_at, amount in payment_iterable.iterator(chunk_size=512):
-            if not paid_at:
-                continue
-            period = datetime(paid_at.year, paid_at.month, 1, tzinfo=paid_at.tzinfo)
-            key = period.date().isoformat()
-            revenue_map[key] = revenue_map.get(key, 0.0) + float(amount or 0)
-
-        registration_map: Dict[str, int] = {}
-        completion_map: Dict[str, int] = {}
-        registration_iterable = (
-            Student.objects.filter(created_at__gte=range_start)
-            .only("created_at")
-            .values_list("created_at", flat=True)
+        revenue_map = self._aggregate_payment_totals(range_start)
+        registration_map = self._aggregate_student_counts(
+            field="created_at",
+            since=range_start,
         )
-        for created_at in registration_iterable.iterator(chunk_size=512):
-            if not created_at:
-                continue
-            period = datetime(created_at.year, created_at.month, 1, tzinfo=created_at.tzinfo)
-            key = period.date().isoformat()
-            registration_map[key] = registration_map.get(key, 0) + 1
-
-        completion_iterable = (
-            Student.objects.filter(
-                status=Student.Status.COMPLETED, updated_at__gte=range_start
-            )
-            .only("updated_at")
-            .values_list("updated_at", flat=True)
+        completion_map = self._aggregate_student_counts(
+            field="updated_at",
+            since=range_start,
+            status=Student.Status.COMPLETED,
         )
-        for updated_at in completion_iterable.iterator(chunk_size=512):
-            if not updated_at:
-                continue
-            period = datetime(updated_at.year, updated_at.month, 1, tzinfo=updated_at.tzinfo)
-            key = period.date().isoformat()
-            completion_map[key] = completion_map.get(key, 0) + 1
 
 
         labels: List[str] = []
@@ -1342,11 +1357,7 @@ def admin_overview_kpis(request: HttpRequest) -> HttpResponse:
     payload = service.peek_kpis()
     if payload is None:
         trigger_overview_warmup_async()
-        response = render(request, "admin/partials/overview_kpis_skeleton.html")
-        response["HX-Trigger"] = json.dumps(
-            {"overview:lazy-reload": {"target": "#overview-summary", "delay": 1200}}
-        )
-        return response
+        payload = service.get_kpis()
 
     context = {
         "cards": payload["cards"],
@@ -1365,18 +1376,7 @@ def admin_overview_trends(request: HttpRequest) -> HttpResponse:
     payload = service.peek_charts(months_back)
     if payload is None:
         trigger_overview_warmup_async(chart_ranges=(months_back,))
-        response = render(request, "admin/partials/overview_trends_skeleton.html")
-        response["HX-Trigger"] = json.dumps(
-            {
-                "overview:update-range": {"range": range_key},
-                "overview:lazy-reload": {
-                    "target": "#overview-charts",
-                    "delay": 1500,
-                    "params": {"range": range_key},
-                },
-            }
-        )
-        return response
+        payload = service.get_chart_payload(months_back=months_back)
     context = {"charts": payload}
     response = render(request, "admin/partials/overview_trends.html", context)
     response["HX-Trigger"] = json.dumps({"overview:update-range": {"range": range_key}})
@@ -1389,12 +1389,423 @@ def admin_overview_alerts(request: HttpRequest) -> HttpResponse:
     payload = service.peek_activity_feed()
     if payload is None:
         trigger_overview_warmup_async()
-        response = render(request, "admin/partials/overview_alerts_skeleton.html")
-        response["HX-Trigger"] = json.dumps(
-            {"overview:lazy-reload": {"target": "#overview-activity", "delay": 1500}}
-        )
-        return response
+        payload = service.get_activity_feed()
     context = {"activities": payload}
     return render(request, "admin/partials/overview_alerts.html", context)
 
 
+@login_required
+def admin_learners(request: HttpRequest) -> HttpResponse:
+    today = timezone.now()
+    all_students = Student.objects.all()
+    course_options = Course.objects.order_by("title").only("id", "title")
+    study_levels = StudyLevel.objects.select_related(None).order_by("program", "order", "id")
+    active_count = all_students.filter(status=Student.Status.ENROLLED).count()
+    waiting_count = all_students.filter(status__in=[Student.Status.WAITING]).count()
+    debt_students = (
+        StudentPayment.objects.filter(status=StudentPayment.Status.PENDING)
+        .values("student_id")
+        .distinct()
+        .count()
+    )
+    new_last_7 = all_students.filter(created_at__gte=today - timedelta(days=7)).count()
+    new_last_30 = all_students.filter(
+        created_at__gte=today - timedelta(days=30)
+    ).count()
+
+    filters = {
+        "status": request.GET.get("status", ""),
+        "course": request.GET.get("course", ""),
+        "track": request.GET.get("track", ""),
+        "level": request.GET.get("level", ""),
+        "financial": request.GET.get("financial", ""),
+        "created_from": request.GET.get("created_from", ""),
+        "created_to": request.GET.get("created_to", ""),
+        "search": request.GET.get("q", "").strip(),
+    }
+
+    students_qs = (
+        Student.objects.select_related("primary_course")
+        .prefetch_related(
+            Prefetch(
+                "payments",
+                queryset=StudentPayment.objects.filter(
+                    status=StudentPayment.Status.PENDING
+                ),
+                to_attr="pending_payments",
+            ),
+            "courses",
+        )
+        .order_by("-created_at")
+    )
+
+    if filters["status"]:
+        if filters["status"] == "pending_class":
+            students_qs = students_qs.filter(primary_course__isnull=True)
+        else:
+            students_qs = students_qs.filter(status=filters["status"])
+
+    if filters["course"]:
+        try:
+            course_id = int(filters["course"])
+        except (TypeError, ValueError):
+            course_id = None
+        if course_id:
+            students_qs = students_qs.filter(
+                Q(primary_course_id=course_id) | Q(courses__id=course_id)
+            ).distinct()
+
+    if filters["track"]:
+        students_qs = students_qs.filter(study_program=filters["track"])
+
+    if filters["track"] and filters["level"]:
+        try:
+            level_id = int(filters["level"])
+        except (TypeError, ValueError):
+            level_id = None
+        if level_id:
+            students_qs = students_qs.filter(study_level_id=level_id).distinct()
+
+    def _parse_date(value: str) -> Optional[date]:
+        try:
+            return datetime.strptime(value, "%Y-%m-%d").date()
+        except (TypeError, ValueError):
+            return None
+
+    created_from = _parse_date(filters["created_from"])
+    created_to = _parse_date(filters["created_to"])
+    if created_from:
+        students_qs = students_qs.filter(created_at__date__gte=created_from)
+    if created_to:
+        students_qs = students_qs.filter(created_at__date__lte=created_to)
+
+    if filters["search"]:
+        students_qs = students_qs.filter(
+            Q(full_name__icontains=filters["search"])
+            | Q(email__icontains=filters["search"])
+            | Q(phone__icontains=filters["search"])
+        )
+
+    if filters["financial"] == "owing":
+        students_qs = students_qs.filter(
+            payments__status=StudentPayment.Status.PENDING
+        ).distinct()
+    elif filters["financial"] == "clear":
+        students_qs = students_qs.exclude(
+            payments__status=StudentPayment.Status.PENDING
+        )
+
+    STATUS_META = {
+        Student.Status.ENROLLED: ("Đang học", "success"),
+        Student.Status.WAITING: ("Chờ xếp lớp", "warning"),
+        Student.Status.WITHDRAWN: ("Đã nghỉ", "muted"),
+        Student.Status.COMPLETED: ("Đã tốt nghiệp", "info"),
+    }
+
+    LEVEL_LABELS = {
+        str(level.id): f"{level.name} ({level.get_program_display()})"
+        if hasattr(level, "get_program_display")
+        else level.name
+        for level in study_levels
+    }
+    PROGRAM_LABELS = dict(StudyProgram.choices)
+
+    paginator = Paginator(students_qs, 10)
+    page = request.GET.get("page")
+    try:
+        students_page = paginator.page(page)
+    except PageNotAnInteger:
+        students_page = paginator.page(1)
+    except EmptyPage:
+        students_page = paginator.page(paginator.num_pages)
+
+    students_payload = []
+    for student in students_page:
+        course_titles = [course.title for course in student.courses.all()]
+        class_display = ""
+        if student.primary_course:
+            extra_courses = max(len(course_titles) - 1, 0)
+            if extra_courses:
+                class_display = f"{student.primary_course.title} +{extra_courses} lớp"
+            else:
+                class_display = student.primary_course.title
+        elif course_titles:
+            class_display = ", ".join(course_titles)
+        else:
+            class_display = "Chưa xếp lớp"
+        courses_display = ", ".join(course_titles) if course_titles else "—"
+
+        status_label, status_tone = STATUS_META.get(
+            student.status, ("Chưa cập nhật", "muted")
+        )
+        level_label = LEVEL_LABELS.get(
+            str(getattr(student.study_level, "id", "")), "Chưa cập nhật"
+        )
+        has_pending_payment = bool(getattr(student, "pending_payments", []))
+        finance_label = "Còn nợ" if has_pending_payment else "Đã đóng đủ"
+        finance_tone = "warning" if has_pending_payment else "success"
+
+        payload = {
+            "name": student.full_name,
+            "phone": student.phone or "—",
+            "email": student.email or "—",
+            "class_display": class_display,
+            "program_label": PROGRAM_LABELS.get(student.study_program, "Chưa chọn"),
+            "status_label": status_label,
+            "status_tone": status_tone,
+            "level_label": level_label,
+            "finance_label": finance_label,
+            "finance_tone": finance_tone,
+            "created_at": student.created_at,
+            "updated_at": student.updated_at,
+            "address": getattr(student, "address", "") or "—",
+            "primary_course": student.primary_course.title if student.primary_course else "—",
+            "courses": courses_display,
+            "enrollment_date": student.enrollment_date,
+            "notes": student.notes or "",
+            "id": student.id,
+        }
+        students_payload.append(payload)
+
+    level_options_all = [
+        (
+            str(level.id),
+            f"{level.name} ({level.get_program_display()})",
+            level.program,
+        )
+        for level in study_levels
+    ]
+
+    context = {
+        "kpis": [
+            {
+                "icon": "fa-user-graduate",
+                "label": "Tổng số học viên đang học",
+                "value": f"{active_count:,}",
+                "meta": "Toàn bộ học viên Đang học",
+                "tone": "primary",
+            },
+            {
+                "icon": "fa-person-circle-exclamation",
+                "label": "Học viên chờ xếp lớp",
+                "value": f"{waiting_count:,}",
+                "meta": "Toàn bộ học viên Đang chờ xếp lớp",
+                "tone": "amber",
+            },
+            {
+                "icon": "fa-wallet",
+                "label": "Học viên nợ học phí",
+                "value": f"{debt_students:,}",
+                "meta": "Tồn tại giao dịch cần thu",
+                "tone": "rose",
+            },
+            {
+                "icon": "fa-user-plus",
+                "label": "Học viên mới 7 / 30 ngày",
+                "value": f"{new_last_7:,} / {new_last_30:,}",
+                "meta": "Tăng trưởng gần đây",
+                "tone": "emerald",
+            },
+        ],
+        "students": students_payload,
+        "filters": filters,
+        "status_options": [
+            ("", "Tất cả trạng thái"),
+            (Student.Status.ENROLLED, "Đang học"),
+            (Student.Status.WAITING, "Đang chờ xếp lớp"),
+            (Student.Status.WITHDRAWN, "Đã nghỉ"),
+            (Student.Status.COMPLETED, "Đã tốt nghiệp"),
+        ],
+        "course_options": course_options,
+        "track_options": StudyProgram.choices,
+        "financial_options": [
+            ("", "Tất cả"),
+            ("clear", "Đã đóng đủ"),
+            ("owing", "Còn nợ"),
+            ("overdue", "Quá hạn"),
+        ],
+        "level_options": (
+            [("", "Tất cả trình độ")]
+            + [
+                (str(level.id), f"{level.name} ({level.get_program_display()})")
+                for level in study_levels
+                if not filters["track"] or level.program == filters["track"]
+            ]
+            if filters["track"]
+            else [("", "Chọn lộ trình để xem trình độ")]
+        ),
+        "level_options_all": level_options_all,
+        "page_obj": students_page,
+    }
+
+    if request.headers.get("HX-Request"):
+        fragment = request.GET.get("fragment")
+        if fragment == "kpis":
+            return render(request, "admin/partials/learners_kpis.html", context)
+        if fragment == "filters":
+            return render(request, "admin/partials/learners_filters.html", context)
+        return render(request, "admin/partials/learners_table.html", context)
+
+    context.update(_get_admin_footer_context())
+    return render(request, "admin/learners.html", context)
+
+
+@login_required
+def admin_learners_export(request: HttpRequest) -> HttpResponse:
+    """Export learners with current filters to XLSX using pandas."""
+
+    filters = {
+        "status": request.GET.get("status", ""),
+        "course": request.GET.get("course", ""),
+        "track": request.GET.get("track", ""),
+        "level": request.GET.get("level", ""),
+        "financial": request.GET.get("financial", ""),
+        "created_from": request.GET.get("created_from", ""),
+        "created_to": request.GET.get("created_to", ""),
+        "search": request.GET.get("q", "").strip(),
+    }
+
+    students_qs = (
+        Student.objects.select_related("primary_course", "study_level")
+        .prefetch_related(
+            Prefetch(
+                "payments",
+                queryset=StudentPayment.objects.filter(
+                    status=StudentPayment.Status.PENDING
+                ),
+                to_attr="pending_payments",
+            ),
+            "courses",
+        )
+        .order_by("-created_at")
+    )
+
+    if filters["status"]:
+        if filters["status"] == "pending_class":
+            students_qs = students_qs.filter(primary_course__isnull=True)
+        else:
+            students_qs = students_qs.filter(status=filters["status"])
+
+    if filters["course"]:
+        try:
+            course_id = int(filters["course"])
+        except (TypeError, ValueError):
+            course_id = None
+        if course_id:
+            students_qs = students_qs.filter(
+                Q(primary_course_id=course_id) | Q(courses__id=course_id)
+            ).distinct()
+
+    if filters["track"]:
+        students_qs = students_qs.filter(study_program=filters["track"])
+
+    if filters["track"] and filters["level"]:
+        try:
+            level_id = int(filters["level"])
+        except (TypeError, ValueError):
+            level_id = None
+        if level_id:
+            students_qs = students_qs.filter(study_level_id=level_id).distinct()
+
+    def _parse_date(value: str) -> Optional[date]:
+        try:
+            return datetime.strptime(value, "%Y-%m-%d").date()
+        except (TypeError, ValueError):
+            return None
+
+    created_from = _parse_date(filters["created_from"])
+    created_to = _parse_date(filters["created_to"])
+    if created_from:
+        students_qs = students_qs.filter(created_at__date__gte=created_from)
+    if created_to:
+        students_qs = students_qs.filter(created_at__date__lte=created_to)
+
+    if filters["search"]:
+        students_qs = students_qs.filter(
+            Q(full_name__icontains=filters["search"])
+            | Q(email__icontains=filters["search"])
+            | Q(phone__icontains=filters["search"])
+        )
+
+    if filters["financial"] == "owing":
+        students_qs = students_qs.filter(
+            payments__status=StudentPayment.Status.PENDING
+        ).distinct()
+    elif filters["financial"] == "clear":
+        students_qs = students_qs.exclude(
+            payments__status=StudentPayment.Status.PENDING
+        )
+
+    program_labels = dict(StudyProgram.choices)
+    status_labels = dict(Student.Status.choices)
+
+    rows = []
+    for student in students_qs:
+        course_titles = [course.title for course in student.courses.all()]
+        if student.primary_course:
+            extra_courses = max(len(course_titles) - 1, 0)
+            if extra_courses:
+                class_display = f"{student.primary_course.title} +{extra_courses} lớp"
+            else:
+                class_display = student.primary_course.title
+        elif course_titles:
+            class_display = ", ".join(course_titles)
+        else:
+            class_display = "Chưa xếp lớp"
+
+        has_pending = bool(getattr(student, "pending_payments", []))
+        finance_label = "Còn nợ" if has_pending else "Đã đóng đủ"
+
+        level_display = (
+            f"{student.study_level.name} ({student.study_level.get_program_display()})"
+            if student.study_level
+            else ""
+        )
+
+        rows.append(
+            {
+                "Họ tên": student.full_name,
+                "Số điện thoại": student.phone,
+                "Email": student.email,
+                "Lộ trình": program_labels.get(student.study_program, ""),
+                "Trình độ": level_display,
+                "Khóa chính": student.primary_course.title if student.primary_course else "",
+                "Lớp tham gia": class_display,
+                "Trạng thái": status_labels.get(student.status, student.status),
+                "Công nợ": finance_label,
+                "Ngày tạo": student.created_at.strftime("%d/%m/%Y"),
+                "Ngày cập nhật": student.updated_at.strftime("%d/%m/%Y"),
+            }
+        )
+
+    df = pd.DataFrame(rows)
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name="Learners")
+
+    response = HttpResponse(
+        output.getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    response["Content-Disposition"] = 'attachment; filename="learners.xlsx"'
+    return response
+
+
+@login_required
+def admin_learners_delete(request: HttpRequest, pk: int) -> HttpResponse:
+
+    if request.method != "POST":
+        raise Http404()
+
+    student = get_object_or_404(Student, pk=pk)
+
+    with transaction.atomic():
+        StudentPayment.objects.filter(student=student).delete()
+        student.courses.clear()
+        student.delete()
+
+    messages.success(request, "Đã xóa học viên và toàn bộ dữ liệu liên quan.")
+    response = redirect("main:admin_learners")
+    if request.headers.get("HX-Request"):
+        response["HX-Redirect"] = reverse("main:admin_learners")
+    return response

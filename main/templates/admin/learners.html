@@ -1,0 +1,404 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}Quản lý học viên - Global English{% endblock %}
+{% block sidebar_learners_active %}active{% endblock %}
+{% block sidebar_learners_href %}{% url "main:admin_learners" %}{% endblock %}
+
+{% block extra_css %}
+    {{ block.super }}
+    <link rel="stylesheet" href="{% static 'admin/css/learners.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="learners-page">
+    <div class="bg-glow" aria-hidden="true"></div>
+
+    <header class="page-header">
+        <div class="page-heading">
+            <p class="page-eyebrow">Bảng điều khiển học viên</p>
+            <div class="page-title-row">
+                <h1 class="page-title">Quản lý học viên</h1>
+            </div>
+            <p class="page-subtitle">Theo dõi danh sách học viên, tình trạng lớp, tiến độ và tài chính với giao diện nhẹ, tập trung hành động nhanh.</p>
+        </div>
+        <div class="page-actions">
+            <button
+                type="submit"
+                form="learnerFilters"
+                formaction="{% url 'main:admin_learners_export' %}"
+                class="btn-ghost"
+            >
+                <i class="fa-solid fa-arrow-up-right-from-square me-2"></i>
+                Xuất danh sách
+            </button>
+            <button type="button" class="btn-primary">
+                <i class="fa-solid fa-plus me-2"></i>
+                Thêm học viên mới
+            </button>
+        </div>
+    </header>
+
+    <section class="kpi-section shadow-panel">
+        <div class="summary-grid kpi-grid">
+            {% if messages %}
+            <div class="alert-messages">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags|default:'info' }} mb-2" role="alert">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% for card in kpis %}
+            <article class="summary-card summary-card--{{ card.tone|default:'violet' }}" tabindex="0" role="region" aria-label="{{ card.label }}">
+                <div class="summary-card__icon">
+                    <i class="fa-solid {{ card.icon }}"></i>
+                </div>
+                <div class="summary-card__content">
+                    <h3 class="summary-card__title">{{ card.label }}</h3>
+                    <p class="summary-card__value">{{ card.value }}</p>
+                    <p class="summary-card__meta">{{ card.meta }}</p>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="filters-card shadow-panel">
+        {% if messages %}
+        <div class="alert-messages" id="alertMessages">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags|default:'info' }} mb-2 d-flex align-items-center justify-content-between" role="alert">
+                    <span>{{ message }}</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary ms-3 js-alert-dismiss" aria-label="Đóng">×</button>
+                </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        <div class="filters-header">
+            <div>
+                <h2 class="section-title">Bộ lọc chi tiết</h2>
+            </div>           
+        </div>
+
+        <form id="learnerFilters" class="filters-form" method="get">
+            <div class="filters-grid">
+                <label class="filter-field">
+                    <span>Trạng thái</span>
+                    <select name="status">
+                        {% for value, label in status_options %}
+                        <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="filter-field">
+                    <span>Khóa học</span>
+                    <select name="course">
+                        <option value="">Tất cả</option>
+                        {% for course in course_options %}
+                        <option value="{{ course.id }}" {% if filters.course|add:""|stringformat:"s" == course.id|stringformat:"s" %}selected{% endif %}>{{ course.title }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="filter-field">
+                    <span>Lộ trình</span>
+                    <select name="track">
+                        <option value="">Tất cả</option>
+                        {% for value, label in track_options %}
+                        <option value="{{ value }}" {% if filters.track == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="filter-field">
+                    <span>Trình độ </span>
+                    <select name="level" id="filterLevel" {% if not filters.track %}disabled aria-disabled="true"{% endif %}>
+                        {% for value, label, program in level_options_all %}
+                        <option
+                            value="{{ value }}"
+                            data-program="{{ program }}"
+                            {% if filters.track and program != filters.track %}hidden disabled{% endif %}
+                            {% if filters.level|add:""|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}
+                        >{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if not filters.track %}
+                    <small class="text-muted">Chọn lộ trình trước để chọn trình độ.</small>
+                    {% endif %}
+                </label>
+                <label class="filter-field">
+                    <span>Tình trạng tài chính</span>
+                    <select name="financial">
+                        {% for value, label in financial_options %}
+                        <option value="{{ value }}" {% if filters.financial == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="filter-field">
+                    <span>Lớp hiện tại</span>
+                    <input type="text" name="class" placeholder="VD: Lớp IELTS K12" disabled aria-disabled="true" />
+                </label>
+                <label class="filter-field filter-field--range">
+                    <span>Thời gian tạo</span>
+                    <div class="filter-range">
+                        <input type="date" name="created_from" value="{{ filters.created_from }}">
+                        <span class="range-separator">–</span>
+                        <input type="date" name="created_to" value="{{ filters.created_to }}">
+                    </div>
+                </label>
+                <label class="filter-field filter-field--search">
+                    <span>Tìm kiếm</span>
+                    <div class="search-input">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="search" name="q" placeholder="Nhập tên, điện thoại hoặc email" value="{{ filters.search }}">
+                    </div>
+                </label>
+            </div>
+
+            <div class="active-filters" aria-live="polite">
+                {% if filters.status %}
+                    <span class="pill pill-outline">
+                        Trạng thái:
+                        {% if filters.status == "enrolled" %}Đang học{% elif filters.status == "pending_class" %}Đang chờ xếp lớp{% elif filters.status == "paused" %}Tạm dừng{% elif filters.status == "withdrawn" %}Đã nghỉ{% elif filters.status == "completed" %}Đã tốt nghiệp{% else %}{{ filters.status }}{% endif %}
+                    </span>
+                {% endif %}
+                {% if filters.financial %}
+                    <span class="pill pill-outline">
+                        Tài chính:
+                        {% if filters.financial == "clear" %}Đã đóng đủ{% elif filters.financial == "owing" %}Còn nợ{% elif filters.financial == "overdue" %}Quá hạn{% else %}{{ filters.financial }}{% endif %}
+                    </span>
+                {% endif %}
+                {% if filters.course %}
+                    {% for course in course_options %}
+                        {% if filters.course|add:""|stringformat:"s" == course.id|stringformat:"s" %}
+                            <span class="pill pill-outline">Khóa: {{ course.title }}</span>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+                {% if filters.track %}
+                    {% for value, label in track_options %}
+                        {% if filters.track == value %}
+                            <span class="pill pill-outline">Lộ trình: {{ label }}</span>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+                {% if filters.level %}
+                    {% for value, label in level_options %}
+                        {% if filters.level == value %}
+                            <span class="pill pill-outline">Trình độ: {{ label }}</span>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+                {% if filters.created_from or filters.created_to %}
+                    <span class="pill pill-outline">Từ {{ filters.created_from|default:"…" }} đến {{ filters.created_to|default:"…" }}</span>
+                {% endif %}
+                {% if filters.search %}
+                    <span class="pill pill-outline">Tìm: “{{ filters.search }}”</span>
+                {% endif %}
+                {% if not filters.status and not filters.financial and not filters.course and not filters.level and not filters.created_from and not filters.created_to and not filters.search %}
+                    <span class="pill pill-soft text-muted">Chưa áp dụng bộ lọc.</span>
+                {% endif %}
+            </div>
+
+            <div class="filters-actions">
+                <div class="filters-actions__primary">
+                    <button type="submit" class="btn-primary">
+                        <i class="fa-solid fa-filter me-2"></i>
+                        Lọc
+                    </button>
+                    <a class="btn-ghost" href="{% url 'main:admin_learners' %}">
+                        <i class="fa-solid fa-xmark me-2"></i>
+                        Xóa bộ lọc
+                    </a>
+                </div>
+            </div>
+        </form>
+    </section>
+
+    <section class="table-card shadow-panel">
+        <div class="table-card__header">
+            <div>
+                <h2 class="section-title mb-1">Danh sách học viên</h2>
+                <p class="page-subtitle">Hiển thị {{ students|length }} học viên theo tiêu chí hiện tại.</p>
+            </div>
+            <div class="table-toolbar">
+                <div class="legend">
+                    <span class="legend-item"><span class="legend-dot legend-dot--success"></span>Đang học</span>
+                    <span class="legend-item"><span class="legend-dot legend-dot--warning"></span>Đang chờ xếp lớp</span>
+                    <span class="legend-item"><span class="legend-dot legend-dot--info"></span>Đã tốt nghiệp</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="learners-table">
+                <thead>
+                    <tr>
+                        <th>Họ tên</th>
+                        <th>Số điện thoại</th>
+                        <th>Email</th>
+                        <th>Lộ trình</th>
+                        <th>Trạng thái</th>
+                        <th>Trình độ</th>
+                        <th>Lớp hiện tại</th>
+                        <th class="col-actions text-center">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if students %}
+                        {% for student in students %}
+                        <tr>
+                            <td class="fw-semibold">{{ student.name }}</td>
+                            <td>{{ student.phone }}</td>
+                            <td class="text-muted">{{ student.email }}</td>
+                            <td>{{ student.program_label }}</td>
+                            <td>
+                                <span class="status-pill status-pill--{{ student.status_tone }}">{{ student.status_label }}</span>
+                            </td>
+                            <td>{{ student.level_label }}</td>
+                            <td>{{ student.class_display }}</td>
+                            <td class="col-actions text-center">
+                                <div class="table-actions" role="group" aria-label="Hành động">
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-primary btn-sm js-view-student"
+                                        title="Xem"
+                                        data-student-name="{{ student.name }}"
+                                        data-student-phone="{{ student.phone }}"
+                                        data-student-email="{{ student.email }}"
+                                        data-student-program="{{ student.program_label }}"
+                                        data-student-level="{{ student.level_label }}"
+                                        data-student-class="{{ student.class_display }}"
+                                        data-student-courses="{{ student.courses }}"
+                                        data-student-primary="{{ student.primary_course }}"
+                                        data-student-status="{{ student.status_label }}"
+                                        data-student-finance="{{ student.finance_label }}"
+                                        data-student-address="{{ student.address }}"
+                                        data-student-enroll="{{ student.enrollment_date|date:'d/m/Y' }}"
+                                        data-student-created="{{ student.created_at|date:'d/m/Y H:i' }}"
+                                        data-student-updated="{{ student.updated_at|date:'d/m/Y H:i' }}"
+                                        data-student-notes="{{ student.notes|default_if_none:'' }}"
+                                        data-student-edit="#"
+                                        data-student-delete="{% if student.id %}{% url 'main:admin_learners_delete' student.id %}{% endif %}"
+                                    >
+                                        <i class="fa-regular fa-eye"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" title="Sửa">
+                                        <i class="fa-regular fa-pen-to-square"></i>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-danger btn-sm js-delete-student"
+                                        title="Xóa"
+                                        data-delete-url="{% if student.id %}{% url 'main:admin_learners_delete' student.id %}{% endif %}"
+                                        data-student-name="{{ student.name }}"
+                                        {% if not student.id %}disabled aria-disabled="true"{% endif %}
+                                    >
+                                        <i class="fa-regular fa-trash-can"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="12" class="empty-state">
+                                <div class="empty-state__body">
+                                    <i class="fa-regular fa-folder-open"></i>
+                                    <div>
+                                        <p class="mb-1 fw-semibold">Hiện chưa có học viên nào khớp bộ lọc.</p>
+                                        <p class="text-muted mb-0">Hãy thử thay đổi điều kiện hoặc thêm học viên mới để bắt đầu.</p>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+        {% if page_obj %}
+        <div class="pagination-bar">
+            <div class="pagination-info">
+                Trang {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} ({{ page_obj.paginator.count }} học viên)
+            </div>
+            <div class="pagination-controls">
+                {% if page_obj.has_previous %}
+                    <a class="btn btn-ghost btn-sm" href="?page={{ page_obj.previous_page_number }}{% if request.GET.urlencode %}&{{ request.GET.urlencode|urlencode }}{% endif %}">« Trước</a>
+                {% else %}
+                    <span class="btn btn-ghost btn-sm disabled">« Trước</span>
+                {% endif %}
+                {% if page_obj.has_next %}
+                    <a class="btn btn-ghost btn-sm" href="?page={{ page_obj.next_page_number }}{% if request.GET.urlencode %}&{{ request.GET.urlencode|urlencode }}{% endif %}">Sau »</a>
+                {% else %}
+                    <span class="btn btn-ghost btn-sm disabled">Sau »</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </section>
+</div>
+
+{% block extra_js %}
+    {{ block.super }}
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <div class="modal fade modal-modern modal-danger" id="deleteStudentModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Xóa học viên</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">
+                        Bạn có chắc chắn muốn xóa <strong id="deleteStudentName">học viên</strong>?<br>
+                        Hành động này sẽ xóa toàn bộ dữ liệu liên quan (khóa, giao dịch...).
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <form method="post" id="deleteStudentForm">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">Xóa</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade modal-modern" id="viewStudentModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content modal-animate">
+                <div class="modal-header">
+                    <h5 class="modal-title">Thông tin học viên</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="modal-subtitle">Thông tin chi tiết của học viên, tình trạng lớp và tài chính.</p>
+                    <div class="detail-grid">
+                        <div class="detail-row"><span class="label">Họ tên:</span> <span id="viewStudentName"></span></div>
+                        <div class="detail-row"><span class="label">Số điện thoại:</span> <span id="viewStudentPhone"></span></div>
+                        <div class="detail-row"><span class="label">Email:</span> <span id="viewStudentEmail"></span></div>
+                        <div class="detail-row"><span class="label">Địa chỉ:</span> <span id="viewStudentAddress"></span></div>
+                        <div class="detail-row"><span class="label">Lộ trình:</span> <span id="viewStudentProgram"></span></div>
+                        <div class="detail-row"><span class="label">Trình độ:</span> <span id="viewStudentLevel"></span></div>
+                        <div class="detail-row"><span class="label">Khóa hiện tại:</span> <span id="viewStudentPrimary"></span></div>
+                        <div class="detail-row"><span class="label">Lớp hiện tại:</span> <span id="viewStudentClass"></span></div>
+                        <div class="detail-row"><span class="label">Các khóa tham gia:</span> <span id="viewStudentCourses"></span></div>
+                        <div class="detail-row"><span class="label">Trạng thái:</span> <span id="viewStudentStatus"></span></div>
+                        <div class="detail-row"><span class="label">Nhập học:</span> <span id="viewStudentEnroll"></span></div>
+                        <div class="detail-row"><span class="label">Công nợ:</span> <span id="viewStudentFinance"></span></div>
+                        <div class="detail-row"><span class="label">Ngày tạo:</span> <span id="viewStudentCreated"></span></div>
+                        <div class="detail-row"><span class="label">Ngày cập nhật:</span> <span id="viewStudentUpdated"></span></div>
+                        <div class="detail-row"><span class="label">Ghi chú:</span> <span id="viewStudentNotes"></span></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn btn-outline-primary" id="viewStudentEdit">Sửa</button>
+                    <button type="button" class="btn btn-outline-danger" id="viewStudentDelete">Xóa</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="{% static 'admin/js/learners.js' %}"></script>
+{% endblock %}
+{% endblock %}

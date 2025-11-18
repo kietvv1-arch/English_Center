@@ -12,15 +12,57 @@ from django.templatetags.static import static
 from django.utils import timezone
 from django.utils.text import slugify
 
-# =========================
-# Teacher (HR + Public)
-# =========================
-
-# Validator cho so dien thoai Viet Nam (0XXXXXXXXX hoac +84XXXXXXXXX)
 PHONE_REGEX = RegexValidator(
     regex=r"^(?:(?:\+84)|0)\d{9}$",
     message="Số điện thoại phải bắt đầu bằng 0 hoặc +84 và gồm đúng 10 chữ số.",
 )
+class StudyProgram(models.TextChoices):
+        IELTS = "ielts", "Lộ trình IELTS"
+        TOEIC = "toeic", "Lộ trình TOEIC"
+
+class StudyLevel(models.Model):
+    program = models.CharField(
+        max_length=10,
+        choices=StudyProgram.choices,
+        db_index=True,
+    )
+    code = models.CharField(
+        max_length=30,
+        unique=True,
+        help_text="Mã level: IEL_STARTER, TOEIC_INT...",
+    )
+    name = models.CharField(
+        max_length=100,
+        help_text="Tên marketing: IELTS 5.5–6.5 (B2)...",
+    )
+    cefr = models.CharField(
+        max_length=10,
+        blank=True,
+        help_text="A1, A2, B1, B2, C1, C2...",
+    )
+    min_score = models.DecimalField(
+        max_digits=5,
+        decimal_places=1,
+        null=True,
+        blank=True,
+        help_text="Điểm tối thiểu (IELTS band hoặc điểm TOEIC).",
+    )
+    max_score = models.DecimalField(
+        max_digits=5,
+        decimal_places=1,
+        null=True,
+        blank=True,
+        help_text="Điểm tối đa.",
+    )
+    order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ("program", "order", "id")
+
+    def __str__(self):
+        return f"{self.get_program_display()} - {self.name}"
+
 
 STUDENT_STATUS_ENROLLED = "enrolled"
 STUDENT_STATUS_COMPLETED = "completed"
@@ -28,16 +70,32 @@ class StudentQuerySet(models.QuerySet):
     def active(self):
         return self.filter(status=STUDENT_STATUS_ENROLLED)
 class Student(models.Model):
-    """Core learner record managed internally."""
     class Status(models.TextChoices):
         ENROLLED = STUDENT_STATUS_ENROLLED, "Đang học"
         COMPLETED = STUDENT_STATUS_COMPLETED, "Đã tốt nghiệp"
-        PAUSED = "paused", "Tạm dừng"
-        WITHDRAWN = "withdrawn", "Đã rời"
+        WAITING = "waiting", "Chờ xếp lớp"
+        WITHDRAWN = "withdrawn", "Bỏ học"
     full_name = models.CharField(max_length=150, verbose_name="Họ tên")
     email = models.EmailField(blank=True, verbose_name="Email")
     phone = models.CharField(max_length=20, blank=True, verbose_name="Số điện thoại")
     date_of_birth = models.DateField(null=True, blank=True, verbose_name="Ngày sinh")
+    address = models.TextField(blank=True, verbose_name="Địa chỉ")
+    study_level = models.ForeignKey(
+        "StudyLevel",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="students",
+        verbose_name="Trình độ (level)",
+    )
+    study_program = models.CharField(
+        max_length=20,
+        choices=StudyProgram.choices,
+        blank=True,
+        null=True,              
+        db_index=True,          
+        verbose_name="Chương trình (IELTS/TOEIC)",
+    )
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
@@ -72,9 +130,19 @@ class Student(models.Model):
         indexes = [
             models.Index(fields=["full_name"]),
             models.Index(fields=["status"]),
+            models.Index(fields=["study_program"]),
         ]
     def __str__(self) -> str:
         return self.full_name
+    def clean(self):
+        super().clean()
+
+        # Nếu có cả chương trình và level thì bắt buộc phải khớp
+        if self.study_level and self.study_program:
+            if self.study_level.program != self.study_program:
+                raise ValidationError({
+                    "study_level": "Trình độ phải thuộc đúng chương trình (IELTS/TOEIC) đã chọn."
+                })
 
 
 class StudentPaymentQuerySet(models.QuerySet):
@@ -86,13 +154,11 @@ class StudentPayment(models.Model):
     class Status(models.TextChoices):
         PENDING = "pending", "Chờ xử lý"
         CONFIRMED = "confirmed", "Đã thu"
-        REFUNDED = "refunded", "Đã hoàn"
 
     class Method(models.TextChoices):
         CASH = "cash", "Tiền mặt"
         TRANSFER = "transfer", "Chuyển khoản"
         CARD = "card", "Thẻ"
-        OTHER = "other", "Khác"
 
     student = models.ForeignKey(
         "Student",
@@ -161,13 +227,6 @@ class TeacherQuerySet(models.QuerySet):
         return self.filter(status="Active")
 
     def featured(self):
-        """
-        Chi giao vien hien thi tren Home:
-        - Dang Active
-        - is_featured=True
-        - Nam trong khoang publish_at/unpublish_at (neu dat)
-        - Da sap xep
-        """
         now = timezone.now()
         return (
             self.active()

@@ -19,7 +19,7 @@
             <aside class="layout__sidebar" id="sidebar">
                 <div class="layout__brand" aria-label="{{ brand_name|default:'Global English' }}">
                     <img
-                        src="{% static 'admin/images/logo.svg' %}"
+                        src="{% static 'public/images/LOGO.png' %}"
                         alt="{{ brand_name|default:'Global English' }}"
                         class="layout__brand-logo"
                     />
@@ -30,7 +30,7 @@
                         <p class="sidebar-section__title">Tổng quan</p>
                         <ul class="layout__nav">
                             <li>
-                                <a class="{% block sidebar_overview_active %}{% endblock %}" href="{% block sidebar_overview_href %}{% url 'main:admin_overview' %}{% endblock %}">
+                                <a class="{% block sidebar_overview_active %}{% endblock %}" href="{% url 'main:admin_overview' %}">
                                     <i class="fas fa-chart-line"></i>
                                     Tổng quan
                                 </a>
@@ -48,7 +48,7 @@
                         <p class="sidebar-section__title">Quản trị vận hành</p>
                         <ul class="layout__nav">
                             <li>
-                                <a class="{% block sidebar_learners_active %}{% endblock %}" href="{% block sidebar_learners_href %}#{% endblock %}">
+                                <a class="{% block sidebar_learners_active %}{% endblock %}" href="{% url 'main:admin_learners' %}">
                                     <i class="fas fa-user-graduate"></i>
                                     Học viên
                                 </a>

@@ -79,6 +79,15 @@ body {
   letter-spacing: 0.03em;
   color: #ffffff;
   font-size: 1.3rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+}
+
+.site-nav .navbar-logo {
+  height: 45px;
+  width: auto;
+  display: block;
 }
 
 .site-nav .navbar-brand:hover,
